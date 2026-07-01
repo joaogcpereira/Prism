@@ -224,7 +224,7 @@ Issues and pull requests are welcome - new connectors (e.g., mailbox `RecipientT
 
 ## License
 
-Released under the **MIT License** - see [`LICENSE`](LICENSE). *(Add a `LICENSE` file with your chosen license before publishing.)*
+Released under the **MIT License**
 
 ## Disclaimer
 
