@@ -228,4 +228,4 @@ Released under the **MIT License**.
 
 ## Disclaimer
 
-Prism is provided as-is. It reads your Microsoft 365 / Azure data and produces recommendations; **you** own the decision to act on any verdict. Validate reclaim candidates on real data before enabling any auto-reclaim flag. Not affiliated with or endorsed by Microsoft. "Contoso" is Microsoft's standard sample organization name and is used here as a placeholder - replace it with your own values.
+Prism is provided as-is. It reads your Microsoft 365 / Azure data and produces recommendations; **you** own the decision to act on any verdict. Validate reclaim candidates on real data before enabling any auto-reclaim flag.
