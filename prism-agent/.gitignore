@@ -1,0 +1,27 @@
+# ---- .NET build output ----
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+*.exe
+*.dll
+*.zip
+*.pdb
+
+# ---- Real agent config — publish deploy/config.sample.json instead ----
+deploy/config.json
+
+# ---- Local app data ----
+data/
+
+# ---- Secrets & certificates (never commit) ----
+*.pfx
+*.p12
+*.key
+*.cer
+*.crt
+*.pem
+appsettings.*.local.json

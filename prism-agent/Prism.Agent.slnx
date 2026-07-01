@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/Prism.Agent.Contracts/Prism.Agent.Contracts.csproj" />
+  <Project Path="src/Prism.Agent/Prism.Agent.csproj" />
+</Solution>

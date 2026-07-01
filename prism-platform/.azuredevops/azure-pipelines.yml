@@ -1,0 +1,157 @@
+# =============================================================================
+# azure-pipelines.yml — Prism (AppID 0001) infrastructure deployment
+# -----------------------------------------------------------------------------
+# Three stages: Validate -> WhatIf -> Deploy (gated by an Environment approval).
+# Deploys main.bicep (+ main.bicepparam) into a resource-group whose name starts
+# with 'dev-' so the modules' environment token resolves to 'dev'.
+#
+# PREREQUISITES (configure once in Azure DevOps):
+#   * A service connection (ARM, workload-identity federation recommended) with
+#     Contributor on the target subscription/RG, named in `azureServiceConnection`.
+#   * An Environment named `Prism-Dev` (Pipelines > Environments) with an
+#     "Approvals and checks" approval gate attached — this is the approval gate
+#     for the Deploy stage.
+#
+# NOTE: this pipeline deploys INFRASTRUCTURE only. Building/pushing the container
+# images (dotnet build of Prism.Connectors / Prism.Scoring, then `az acr build`)
+# is a separate pipeline that runs after this one.
+# =============================================================================
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infra/**            # adjust to wherever these .bicep files live in the repo
+
+pr: none                    # infra deploys from main only; remove to enable PR validation
+
+variables:
+  azureServiceConnection: 'dev-prism-spn'                       # <-- your ARM service connection
+  subscriptionId: '00000000-0000-0000-0000-000000000000'              # subscription that holds the dev-* RG
+  resourceGroupName: 'dev-prism'                          # MUST start with 'dev-'
+  location: 'westeurope'
+  templateFile: 'infra/main.bicep'
+  parametersFile: 'infra/main.bicepparam'
+  deploymentName: 'prism-infra-$(Build.BuildId)'
+
+stages:
+  # ---------------------------------------------------------------------------
+  - stage: Validate
+    displayName: 'Validate (lint + build + validate)'
+    jobs:
+      - job: validate
+        displayName: 'Bicep build & template validation'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+
+          - script: |
+              set -euo pipefail
+              if [[ "$(resourceGroupName)" != dev-* ]]; then
+                echo "##vso[task.logissue type=error]resourceGroupName '$(resourceGroupName)' must start with 'dev-' so the env token resolves to 'dev'."
+                exit 1
+              fi
+              echo "Resource group name OK: $(resourceGroupName)"
+            displayName: 'Guard: RG name resolves env token to dev'
+
+          - task: AzureCLI@2
+            displayName: 'az bicep build + deployment validate'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                set -euo pipefail
+                az account set --subscription "$(subscriptionId)"
+                az bicep upgrade || az bicep install
+                # Compile (restores AVM br/public modules from MCR).
+                az bicep build --file "$(templateFile)"
+                # Ensure the RG exists so validate/what-if have a scope.
+                az group create \
+                  --name "$(resourceGroupName)" \
+                  --location "$(location)" \
+                  --subscription "$(subscriptionId)" \
+                  --only-show-errors
+                az deployment group validate \
+                  --resource-group "$(resourceGroupName)" \
+                  --template-file "$(templateFile)" \
+                  --parameters "$(parametersFile)" \
+                  --only-show-errors
+
+  # ---------------------------------------------------------------------------
+  - stage: WhatIf
+    displayName: 'What-If (preview changes)'
+    dependsOn: Validate
+    condition: succeeded()
+    jobs:
+      - job: whatif
+        displayName: 'az deployment group what-if'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+          - task: AzureCLI@2
+            displayName: 'What-If preview'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                set -euo pipefail
+                az account set --subscription "$(subscriptionId)"
+                az deployment group what-if \
+                  --resource-group "$(resourceGroupName)" \
+                  --template-file "$(templateFile)" \
+                  --parameters "$(parametersFile)" \
+                  --only-show-errors
+
+  # ---------------------------------------------------------------------------
+  - stage: Deploy
+    displayName: 'Deploy (approval-gated)'
+    dependsOn: WhatIf
+    condition: succeeded()
+    jobs:
+      - deployment: deploy
+        displayName: 'az deployment group create'
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'Prism-Dev'      # attach the approval check to this environment
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                - task: AzureCLI@2
+                  displayName: 'Deploy main.bicep'
+                  inputs:
+                    azureSubscription: '$(azureServiceConnection)'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      set -euo pipefail
+                      az account set --subscription "$(subscriptionId)"
+                      az deployment group create \
+                        --name "$(deploymentName)" \
+                        --resource-group "$(resourceGroupName)" \
+                        --template-file "$(templateFile)" \
+                        --parameters "$(parametersFile)" \
+                        --only-show-errors
+
+                - task: AzureCLI@2
+                  displayName: 'Echo outputs for the platform team'
+                  inputs:
+                    azureSubscription: '$(azureServiceConnection)'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      set -euo pipefail
+                      az account set --subscription "$(subscriptionId)"
+                      echo "Deployment outputs (send FQDNs to the network team; PE private IPs are read from the portal/CLI post-deploy):"
+                      az deployment group show \
+                        --name "$(deploymentName)" \
+                        --resource-group "$(resourceGroupName)" \
+                        --query properties.outputs \
+                        --only-show-errors -o jsonc

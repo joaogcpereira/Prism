@@ -1,0 +1,32 @@
+# ---- .NET build output ----
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+*.exe
+*.dll
+*.zip
+*.pdb
+
+# ---- Local app data / connector landing dirs ----
+data/
+**/data/m365/
+**/data/usage/
+
+# ---- Secrets & certificates (never commit) ----
+# Device-trust / server certs are supplied at runtime (Key Vault or a local path),
+# never checked in. Force-add a sample only if you deliberately need one.
+*.pfx
+*.p12
+*.key
+*.cer
+*.crt
+*.pem
+appsettings.*.local.json
+
+# ---- Internal / not-for-publication artefacts ----
+PAA-firewall-*.xlsx
+*-REVIEWED.xlsx

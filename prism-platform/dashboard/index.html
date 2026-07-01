@@ -1,0 +1,2014 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Prism · Intelligent Software Asset & FinOps Governance Platform (ISAFGP)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;450;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════════════════════════════════
+   PRISM 2.0 - DESIGN SYSTEM
+   A refined-corporate license-intelligence dashboard.
+   Single accent (Contoso green), 4px baseline grid, three type roles,
+   tonal elevation, first-class dark mode. Built for international juries.
+   ════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  /* ── Contoso palette (preserved exactly from production) ── */
+  --green:#0F8143; --green-deep:#0A5C30; --green-bright:#15A656;
+  --green-soft:#E3F0E8; --green-line:#CFE4D7; --green-wash:#F2F8F4;
+  --danger:#C42B1C; --danger-soft:#FBE7E4;
+  --review:#B7791F; --review-soft:#FBF1DC;
+  --keep:#0F8143; --keep-soft:#E3F0E8;
+
+  /* ── surfaces & ink ── */
+  --bg:#EDF3EE; --panel:#FFFFFF; --panel-2:#FBFDFB; --field:#F2F8F4;
+  --text:#16211B; --muted:#566159; --dim:#8A958E; --faint:#AEB8B1;
+  --line:#E2EBE5; --line-soft:#EDF3EF; --hairline:#D7E3DB;
+
+  /* ── elevation (refined, layered, never heavy) ── */
+  --e1:0 1px 2px rgba(16,40,28,.05), 0 2px 8px -4px rgba(16,40,28,.10);
+  --e2:0 1px 3px rgba(16,40,28,.06), 0 10px 28px -14px rgba(16,40,28,.18);
+  --e3:0 2px 6px rgba(16,40,28,.08), 0 18px 44px -20px rgba(16,40,28,.26);
+  --glow:0 0 0 1px var(--green-line), 0 8px 28px -12px rgba(15,129,67,.28);
+
+  /* ── geometry ── */
+  --r-xs:8px; --r-sm:12px; --r:16px; --r-lg:22px; --r-xl:28px;
+  --rail-w:248px; --topbar-h:68px;
+  --maxw:1440px;
+
+  /* ── type roles ── */
+  --f-display:'Fraunces',Georgia,serif;     /* editorial display - hero numbers & titles */
+  --f-body:'Inter',system-ui,sans-serif;     /* humanist sans - all prose & UI */
+  --f-num:'Space Grotesk',ui-monospace,monospace; /* tabular data - every figure */
+
+  /* ── motion ── */
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --dur:.5s;
+}
+
+:root[data-theme="dark"]{
+  --green:#1DB368; --green-deep:#0F8143; --green-bright:#2BD07E;
+  --green-soft:#243730; --green-line:#334D3F; --green-wash:#1F2E28;
+  --danger:#E66A5F; --danger-soft:#3A211C;
+  --review:#D69A4A; --review-soft:#352616;
+  --keep:#1DB368; --keep-soft:#243730;
+
+  --bg:#161E1A; --panel:#1E2823; --panel-2:#222D27; --field:#28342E;
+  --text:#D6E4DC; --muted:#8FA89C; --dim:#647A6E; --faint:#4C6155;
+  --line:#2A3832; --line-soft:#243029; --hairline:#324138;
+
+  --e1:0 1px 2px rgba(0,0,0,.3), 0 2px 8px -4px rgba(0,0,0,.4);
+  --e2:0 1px 3px rgba(0,0,0,.34), 0 10px 28px -14px rgba(0,0,0,.5);
+  --e3:0 2px 8px rgba(0,0,0,.4), 0 18px 44px -20px rgba(0,0,0,.6);
+  --glow:0 0 0 1px var(--green-line), 0 8px 28px -12px rgba(29,179,104,.3);
+}
+
+/* ── reset ── */
+*{box-sizing:border-box;margin:0;padding:0}
+html{height:100%;-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--f-body);color:var(--text);background:var(--bg);
+  line-height:1.5;height:100%;overflow:hidden;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  font-feature-settings:"cv05","ss01";
+}
+::selection{background:var(--green);color:#fff}
+.tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+/* ── ambient backdrop ── */
+.backdrop{position:fixed;inset:0;z-index:-2;background:
+  radial-gradient(1100px 700px at 88% -8%, rgba(15,129,67,.07), transparent 58%),
+  radial-gradient(900px 650px at -6% 4%, rgba(15,129,67,.05), transparent 52%),
+  var(--bg);}
+:root[data-theme="dark"] .backdrop{background:
+  radial-gradient(1100px 700px at 88% -8%, rgba(29,179,104,.10), transparent 58%),
+  radial-gradient(900px 650px at -6% 4%, rgba(29,179,104,.06), transparent 52%),
+  var(--bg);}
+
+/* scrollbars */
+*::-webkit-scrollbar{width:11px;height:11px}
+*::-webkit-scrollbar-thumb{background:var(--hairline);border-radius:9px;border:3px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:var(--green-line)}
+*::-webkit-scrollbar-track{background:transparent}
+
+/* ════════════════════════════════════════════════════════════════════════
+   APP SHELL
+   ════════════════════════════════════════════════════════════════════════ */
+.shell{display:grid;grid-template-columns:var(--rail-w) 1fr;height:100vh}
+
+/* ── navigation rail ── */
+.rail{
+  position:relative;display:flex;flex-direction:column;
+  padding:24px 16px;gap:4px;border-right:1px solid var(--line);
+  background:linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+  z-index:20;
+}
+.brand{display:flex;align-items:center;gap:12px;padding:6px 8px 26px}
+.brand .mark{width:38px;height:38px;flex:none;position:relative;filter:drop-shadow(0 4px 10px rgba(15,129,67,.28))}
+.brand .wm{display:flex;flex-direction:column;line-height:1}
+.brand .wm .k{font-size:9.5px;letter-spacing:.34em;color:var(--dim);font-weight:600;margin-bottom:3px}
+.brand .wm .n{font-family:var(--f-display);font-weight:600;font-size:21px;color:var(--text);letter-spacing:.01em}
+
+.navlabel{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);
+  font-weight:700;padding:18px 12px 8px}
+.navitem{
+  display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:var(--r-sm);
+  color:var(--muted);font-size:13.5px;font-weight:500;cursor:pointer;position:relative;
+  transition:color .18s var(--ease), background .18s var(--ease);
+}
+.navitem svg{width:19px;height:19px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+.navitem:hover{background:var(--green-wash);color:var(--text)}
+.navitem.on{background:var(--green-soft);color:var(--green-deep);font-weight:600}
+:root[data-theme="dark"] .navitem.on{color:var(--green-bright)}
+.navitem.on::before{content:"";position:absolute;left:-16px;top:50%;transform:translateY(-50%);
+  width:4px;height:20px;border-radius:0 4px 4px 0;background:var(--green)}
+.navitem .badge{margin-left:auto;font-family:var(--f-num);font-size:10.5px;font-weight:600;
+  background:var(--danger);color:#fff;border-radius:20px;padding:1px 7px;min-width:20px;text-align:center}
+.navitem.on .badge{background:var(--green)}
+
+.rail .spacer{flex:1}
+.railtool{display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:var(--r-sm);
+  color:var(--muted);font-size:12.5px;font-weight:500;cursor:pointer;width:100%;border:0;background:none;text-align:left;
+  transition:.15s var(--ease);font-family:var(--f-body)}
+.railtool svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7}
+.railtool:hover{background:var(--green-wash);color:var(--text)}
+
+/* ── main column ── */
+.main{display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden}
+
+/* ── top bar ── */
+.topbar{
+  height:var(--topbar-h);flex:none;display:flex;align-items:center;gap:16px;
+  padding:0 32px;border-bottom:1px solid var(--line);
+  background:color-mix(in srgb, var(--panel) 82%, transparent);backdrop-filter:blur(12px);
+  position:relative;z-index:10;
+}
+.topbar .crumb{display:flex;flex-direction:column;gap:1px}
+.topbar .crumb .pre{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.topbar .crumb h1{font-family:var(--f-display);font-weight:600;font-size:21px;letter-spacing:0;color:var(--text)}
+.topbar .grow{flex:1}
+.topbar .pill{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border-radius:20px;
+  font-size:11.5px;font-weight:600;letter-spacing:.01em}
+.pill.sample{background:var(--review-soft);color:var(--review)}
+.pill.ro{background:var(--green-soft);color:var(--green-deep)}
+:root[data-theme="dark"] .pill.ro{color:var(--green-bright)}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.topbar .qbtn{width:36px;height:36px;border-radius:11px;border:1px solid var(--line);background:var(--panel);
+  display:grid;place-items:center;cursor:pointer;color:var(--muted);transition:.15s var(--ease)}
+.topbar .qbtn:hover{color:var(--green);border-color:var(--green-line);box-shadow:var(--e1)}
+.topbar .qbtn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8}
+
+/* ── scroll area ── */
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;scroll-behavior:smooth}
+.page{max-width:var(--maxw);margin:0 auto;padding:30px 32px 96px}
+
+/* ════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHY & PRIMITIVES
+   ════════════════════════════════════════════════════════════════════════ */
+.eyebrow{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);font-weight:700}
+.lede{font-size:14px;color:var(--muted);line-height:1.6;max-width:70ch}
+.lede b{color:var(--text);font-weight:600}
+.lede code{font-family:var(--f-num);font-size:12px;background:var(--field);padding:1.5px 6px;border-radius:6px;color:var(--green-deep)}
+:root[data-theme="dark"] .lede code{color:var(--green-bright)}
+
+.sechead{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin:46px 2px 18px}
+.sechead .t{display:flex;flex-direction:column;gap:5px}
+.sechead h2{font-family:var(--f-display);font-weight:600;font-size:23px;letter-spacing:0;color:var(--text);line-height:1.1}
+.sechead .s{font-size:13px;color:var(--muted);max-width:64ch;line-height:1.5}
+.sechead .act{font-size:12.5px;color:var(--green);font-weight:600;cursor:pointer;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:5px;padding-bottom:3px}
+.sechead .act:hover{color:var(--green-deep)}
+:root[data-theme="dark"] .sechead .act:hover{color:var(--green-bright)}
+.sechead .act svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* card */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--e1);
+  transition:box-shadow .25s var(--ease), transform .25s var(--ease), border-color .25s var(--ease)}
+.card.hoverable:hover{box-shadow:var(--e2);border-color:var(--hairline)}
+.card .ch{padding:20px 22px 0}
+.card .ch h3{font-family:var(--f-display);font-weight:600;font-size:15.5px;color:var(--text);letter-spacing:0;display:flex;align-items:center;gap:9px}
+.card .ch .sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.card .cb{padding:18px 22px 22px}
+
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3.5px 9px;border-radius:8px;letter-spacing:.01em;white-space:nowrap}
+.chip .d{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+.chip.reclaim{background:var(--danger-soft);color:var(--danger)}
+.chip.review{background:var(--review-soft);color:var(--review)}
+.chip.keep{background:var(--keep-soft);color:var(--keep)}
+.chip.neutral{background:var(--field);color:var(--muted)}
+.chip.hi{background:var(--green-soft);color:var(--green-deep)}
+:root[data-theme="dark"] .chip.hi{color:var(--green-bright)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:11px;
+  font-family:var(--f-body);font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--line);
+  background:var(--panel);color:var(--text);transition:.15s var(--ease)}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+.btn:hover{border-color:var(--green-line);color:var(--green);box-shadow:var(--e1)}
+.btn.primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn.primary:hover{background:var(--green-deep);color:#fff;box-shadow:var(--e2)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.ghost:hover{background:var(--green-wash);box-shadow:none}
+
+/* segmented control */
+.seg{display:inline-flex;background:var(--field);border-radius:11px;padding:3px;gap:2px}
+.seg button{height:32px;padding:0 14px;border:0;background:none;font-family:var(--f-body);font-size:12.5px;
+  font-weight:600;color:var(--muted);cursor:pointer;border-radius:8px;transition:.15s var(--ease)}
+.seg button:hover{color:var(--text)}
+.seg button.on{background:var(--panel);color:var(--green-deep);box-shadow:var(--e1)}
+:root[data-theme="dark"] .seg button.on{color:var(--green-bright)}
+
+/* inputs */
+.input{height:40px;border:1px solid var(--line);border-radius:11px;background:var(--panel);
+  padding:0 14px;font-family:var(--f-body);font-size:13px;color:var(--text);transition:.15s var(--ease)}
+.input:focus{outline:none;border-color:var(--green-line);box-shadow:0 0 0 3px var(--green-soft)}
+.input::placeholder{color:var(--faint)}
+select.input{cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238A958E' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+/* reveal-on-load */
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.reveal{animation:rise .6s var(--ease-out) both}
+@media (prefers-reduced-motion:reduce){
+  .reveal{animation:none}
+  *{scroll-behavior:auto!important}
+}
+
+.hidden{display:none!important}
+
+/* ════════════════════════════════════════════════════════════════════════
+   HERO - Act I: the headline
+   ════════════════════════════════════════════════════════════════════════ */
+.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--e2)}
+.hero .left{background:linear-gradient(150deg, var(--panel) 55%, var(--green-wash));padding:34px 36px;position:relative;overflow:hidden}
+.hero .left::after{content:"";position:absolute;right:-60px;bottom:-80px;width:280px;height:280px;border-radius:50%;
+  background:radial-gradient(circle, var(--green-soft), transparent 70%);opacity:.7;pointer-events:none}
+.hero .right{background:var(--panel);padding:30px 32px;display:flex;flex-direction:column;gap:18px}
+.hero .biglabel{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+.hero .biglabel .eyebrow{color:var(--green-deep)}
+:root[data-theme="dark"] .hero .biglabel .eyebrow{color:var(--green-bright)}
+.hero .num{font-family:var(--f-display);font-weight:600;font-size:72px;line-height:.92;letter-spacing:-.02em;
+  color:var(--green-deep);position:relative;z-index:1}
+:root[data-theme="dark"] .hero .num{color:var(--green-bright)}
+.hero .num .cur{font-size:40px;vertical-align:top;margin-right:4px;opacity:.7}
+.hero .num .per{font-size:32px;color:var(--muted);font-family:var(--f-body);font-weight:500}
+.hero .subline{font-size:14.5px;color:var(--muted);margin-top:16px;line-height:1.55;max-width:46ch;position:relative;z-index:1}
+.hero .subline b{color:var(--text);font-weight:600}
+.hero .metarow{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;position:relative;z-index:1}
+
+.hero .right .rlabel{display:flex;align-items:center;justify-content:space-between}
+.hero .right .rlabel .eyebrow{color:var(--dim)}
+.hero .right .rlabel .q{font-size:11.5px;color:var(--muted);font-family:var(--f-num)}
+/* confidence ribbon */
+.ribbon{display:flex;height:38px;border-radius:11px;overflow:hidden;background:var(--field)}
+.ribbon .s{height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--f-num);
+  font-size:12px;font-weight:600;transition:width 1s var(--ease-out);min-width:0;overflow:hidden;white-space:nowrap}
+.ribleg{display:flex;flex-direction:column;gap:11px}
+.ribleg .row{display:grid;grid-template-columns:11px 1fr auto auto;align-items:center;gap:11px;cursor:pointer;
+  font-size:13px;padding:2px 0}
+.ribleg .row:hover .nm{color:var(--green)}
+.ribleg .sw{width:11px;height:11px;border-radius:3.5px}
+.ribleg .nm{color:var(--muted);font-weight:500}
+.ribleg .ct{font-family:var(--f-num);font-size:11.5px;color:var(--dim)}
+.ribleg .vl{font-family:var(--f-num);font-weight:600;color:var(--text);min-width:82px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* what-if scrubber */
+.whatif{border-top:1px dashed var(--line);padding-top:16px;margin-top:2px}
+.whatif .wlabel{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:11px}
+.whatif .wlabel b{color:var(--green-deep);font-family:var(--f-num);font-weight:600}
+:root[data-theme="dark"] .whatif .wlabel b{color:var(--green-bright)}
+.whatif input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;
+  background:linear-gradient(90deg,var(--green) var(--p,50%),var(--field) var(--p,50%));cursor:pointer;outline:none}
+.whatif input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+  background:var(--panel);border:3px solid var(--green);box-shadow:var(--e1);cursor:grab}
+.whatif input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--panel);
+  border:3px solid var(--green);box-shadow:var(--e1);cursor:grab}
+.whatif .wscale{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:7px;font-family:var(--f-num)}
+
+/* ════════════════════════════════════════════════════════════════════════
+   KPI STAT STRIP
+   ════════════════════════════════════════════════════════════════════════ */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;
+  display:flex;flex-direction:column;min-height:118px;box-shadow:var(--e1);position:relative;overflow:hidden;
+  transition:.2s var(--ease)}
+.stat.click{cursor:pointer}
+.stat.click:hover{box-shadow:var(--e2);transform:translateY(-2px);border-color:var(--green-line)}
+.stat .top{display:flex;align-items:center;justify-content:space-between}
+.stat .lbl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:700}
+.stat .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--green-soft);flex:none}
+.stat .ic svg{width:15px;height:15px;stroke:var(--green);fill:none;stroke-width:1.9}
+.stat .v{font-family:var(--f-num);font-weight:600;font-size:32px;color:var(--text);line-height:1;margin-top:auto;
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.stat .v small{font-size:14px;color:var(--muted);font-weight:500}
+.stat .foot{font-size:11.5px;color:var(--muted);margin-top:9px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+
+/* ════════════════════════════════════════════════════════════════════════
+   WATERFALL - signature viz A
+   ════════════════════════════════════════════════════════════════════════ */
+.wfwrap{padding:8px 22px 22px}
+.wf{width:100%;height:300px;display:block;overflow:visible}
+.wf .bar{transition:opacity .2s var(--ease);cursor:default}
+.wf .bar:hover{opacity:.86}
+.wf .connector{stroke:var(--hairline);stroke-width:1.5;stroke-dasharray:3 3;fill:none}
+.wf .vlabel{font-family:var(--f-num);font-size:13px;font-weight:600;fill:var(--text);font-variant-numeric:tabular-nums}
+.wf .clabel{font-family:var(--f-body);font-size:11px;fill:var(--muted)}
+.wf .clabel.b{fill:var(--text);font-weight:600;font-size:11.5px}
+.wflegend{display:flex;gap:18px;flex-wrap:wrap;padding:0 22px 4px}
+.wflegend .l{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.wflegend .sw{width:11px;height:11px;border-radius:3px}
+
+/* ════════════════════════════════════════════════════════════════════════
+   HEATMAP - signature viz B
+   ════════════════════════════════════════════════════════════════════════ */
+.hmwrap{padding:10px 22px 22px;overflow-x:auto}
+.hm{border-collapse:separate;border-spacing:0;width:100%;min-width:560px}
+.hm th{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);font-weight:700;
+  padding:8px 6px;text-align:center;vertical-align:bottom}
+.hm th.corner{text-align:left;width:150px}
+.hm th.tot,.hm td.tot{border-left:2px solid var(--line)}
+.hm .rl{font-size:12.5px;font-weight:600;color:var(--text);padding:0 12px 0 4px;white-space:nowrap;text-align:left}
+.hm td{padding:3px}
+.hm .cell{height:46px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;transition:transform .12s var(--ease), box-shadow .12s var(--ease);position:relative;gap:1px}
+.hm .cell:hover{transform:scale(1.07);box-shadow:var(--e2);z-index:2}
+.hm .cell .n{font-family:var(--f-num);font-size:14px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.hm .cell .a{font-family:var(--f-num);font-size:9px;opacity:.8;line-height:1}
+.hm .tot .cell{background:transparent!important;cursor:default}
+.hm .tot .cell:hover{transform:none;box-shadow:none}
+.hm .tot .cell .n{color:var(--text)}
+.hm tfoot td{padding-top:8px}
+.hm .colsum{font-family:var(--f-num);font-size:12px;font-weight:600;color:var(--text);text-align:center;font-variant-numeric:tabular-nums}
+.hmscale{display:flex;align-items:center;gap:10px;padding:0 22px 16px;font-size:11px;color:var(--muted)}
+.hmscale .grad{width:120px;height:9px;border-radius:5px;
+  background:linear-gradient(90deg, var(--green-soft), var(--green))}
+
+/* viz toggle */
+.vizswitch{display:inline-flex;gap:3px;background:var(--field);padding:3px;border-radius:11px}
+.vizswitch button{height:30px;padding:0 13px;border:0;background:none;font-family:var(--f-body);font-size:12px;
+  font-weight:600;color:var(--muted);cursor:pointer;border-radius:8px;transition:.15s var(--ease);display:flex;align-items:center;gap:6px}
+.vizswitch button svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.9}
+.vizswitch button.on{background:var(--panel);color:var(--green-deep);box-shadow:var(--e1)}
+:root[data-theme="dark"] .vizswitch button.on{color:var(--green-bright)}
+
+/* ════════════════════════════════════════════════════════════════════════
+   INSIGHT TILES (cross-referenced)
+   ════════════════════════════════════════════════════════════════════════ */
+.insights{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.itile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--e1);
+  transition:.2s var(--ease)}
+.itile.click{cursor:pointer}
+.itile.click:hover{box-shadow:var(--e2);transform:translateY(-2px);border-color:var(--green-line)}
+.itile .ih{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.itile .ih svg{width:15px;height:15px;stroke:var(--green);fill:none;stroke-width:1.9}
+.itile .ih .t{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:700}
+.itile .big{font-family:var(--f-num);font-weight:600;font-size:26px;color:var(--text);line-height:1.05;font-variant-numeric:tabular-nums}
+.itile .big small{font-size:13px;color:var(--muted);font-weight:500}
+.itile .desc{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.itile .desc b{color:var(--green-deep)}
+:root[data-theme="dark"] .itile .desc b{color:var(--green-bright)}
+
+/* ════════════════════════════════════════════════════════════════════════
+   TABLES
+   ════════════════════════════════════════════════════════════════════════ */
+.tablecard{overflow:hidden}
+.tabletools{display:flex;align-items:center;gap:11px;padding:16px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tabletools .search{flex:1;min-width:200px;max-width:340px;position:relative;display:flex;align-items:center}
+.tabletools .search svg{position:absolute;left:13px;width:15px;height:15px;stroke:var(--dim);fill:none;stroke-width:1.8;pointer-events:none}
+.tabletools .search input{width:100%;height:40px;padding-left:38px}
+.tabletools .grow{flex:1}
+.tscroll{overflow-x:auto}
+table.data{width:100%;border-collapse:collapse;font-size:13px}
+table.data thead th{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:700;
+  text-align:left;padding:13px 16px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;
+  background:var(--panel);z-index:1;user-select:none}
+table.data thead th.num{text-align:right}
+table.data thead th.sortable{cursor:pointer}
+table.data thead th.sortable:hover{color:var(--green)}
+table.data thead th .ar{display:inline-block;width:0;color:var(--green);font-size:9px;margin-left:3px}
+table.data tbody td{padding:13px 16px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+table.data tbody td.num{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums}
+table.data tbody tr{transition:background .12s var(--ease)}
+table.data tbody tr:hover{background:var(--green-wash)}
+table.data tbody tr:last-child td{border-bottom:0}
+.cellmain{font-weight:600;color:var(--text)}
+.cellsub{font-size:11.5px;color:var(--dim);margin-top:1px}
+.skucode{font-family:var(--f-num);font-size:11px;color:var(--dim);letter-spacing:.02em}
+.linklike{color:var(--green);font-weight:600;cursor:pointer}
+.linklike:hover{color:var(--green-deep)}
+:root[data-theme="dark"] .linklike:hover{color:var(--green-bright)}
+.tfoot{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--muted)}
+.tfoot b{font-family:var(--f-num);color:var(--green-deep);font-weight:600}
+:root[data-theme="dark"] .tfoot b{color:var(--green-bright)}
+
+/* utilisation micro-bar */
+.ubar{display:flex;align-items:center;gap:9px}
+.ubar .track{width:74px;height:7px;border-radius:5px;background:var(--green-soft);overflow:hidden;flex:none}
+.ubar .fill{height:100%;border-radius:5px}
+.ubar .pct{font-family:var(--f-num);font-size:12px;color:var(--muted);min-width:34px;font-variant-numeric:tabular-nums}
+
+/* score meter */
+.score{display:flex;align-items:center;gap:8px}
+.score .track{width:46px;height:6px;border-radius:4px;background:var(--field);overflow:hidden}
+.score .fill{height:100%;border-radius:4px}
+.score .v{font-family:var(--f-num);font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+
+/* reason tags */
+.reasons{display:flex;flex-wrap:wrap;gap:4px;max-width:230px}
+.rtag{font-size:10px;font-weight:500;padding:2px 7px;border-radius:6px;background:var(--field);color:var(--muted);white-space:nowrap}
+.rtag.warn{background:var(--review-soft);color:var(--review)}
+.rtag.bad{background:var(--danger-soft);color:var(--danger)}
+
+/* callout */
+.callout{display:flex;gap:13px;align-items:flex-start;padding:15px 18px;border-radius:var(--r-sm);
+  background:var(--review-soft);border:1px solid color-mix(in srgb,var(--review) 24%,transparent);margin-bottom:18px}
+.callout svg{width:19px;height:19px;stroke:var(--review);fill:none;stroke-width:1.9;flex:none;margin-top:1px}
+.callout .ct{font-size:13px;color:var(--text);line-height:1.55}
+.callout .ct b{color:var(--review)}
+.callout .ct code{font-family:var(--f-num);font-size:11.5px;background:color-mix(in srgb,var(--review) 14%,transparent);padding:1px 6px;border-radius:5px}
+
+/* horizontal bar list (departments etc.) */
+.hbars{display:flex;flex-direction:column;gap:13px}
+.hbar{display:grid;grid-template-columns:150px 1fr auto;align-items:center;gap:14px;cursor:pointer}
+.hbar:hover .hbn{color:var(--green)}
+.hbar .hbn{font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbar .hbt{height:18px;border-radius:7px;background:var(--green-soft);overflow:hidden}
+.hbar .hbf{height:100%;border-radius:7px;background:linear-gradient(90deg,var(--green-deep),var(--green));
+  transform-origin:left;animation:grow .9s var(--ease-out) both}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.hbar .hbv{font-family:var(--f-num);font-size:12.5px;font-weight:600;color:var(--muted);min-width:84px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* ranked quick-wins */
+.qw{display:flex;flex-direction:column;gap:9px}
+.qwi{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:13px;padding:12px 14px;
+  border:1px solid var(--green-line);background:var(--green-wash);border-radius:13px;cursor:pointer;transition:.15s var(--ease)}
+.qwi:hover{box-shadow:var(--e1);transform:translateX(3px)}
+.qwi .rk{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;
+  font-family:var(--f-num);font-weight:700;font-size:12px}
+.qwi .nm{font-size:13.5px;font-weight:600;color:var(--text)}
+.qwi .mt{font-size:11px;color:var(--muted);margin-top:1px}
+.qwi .vl{font-family:var(--f-num);font-weight:600;font-size:14px;color:var(--green-deep);text-align:right;font-variant-numeric:tabular-nums}
+:root[data-theme="dark"] .qwi .vl{color:var(--green-bright)}
+.qwi .vl small{display:block;font-size:10px;color:var(--muted);font-weight:400;font-family:var(--f-body)}
+
+/* trend chart */
+.trend{width:100%;height:200px;display:block;overflow:visible}
+.trend .area{opacity:.14}
+.trend .ln{fill:none;stroke:var(--green);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.trend .dot{fill:var(--panel);stroke:var(--green);stroke-width:2.5;cursor:pointer;transition:r .12s}
+.trend .dot:hover{r:6}
+.trend .gl{stroke:var(--line-soft);stroke-width:1}
+.trend .axt{font-family:var(--f-num);font-size:10.5px;fill:var(--faint)}
+
+/* grids */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.g12{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+@media(max-width:1080px){.g2,.g3,.g12{grid-template-columns:1fr}.stats,.insights{grid-template-columns:1fr 1fr}.hero{grid-template-columns:1fr}}
+
+/* empty state */
+.empty{padding:38px;text-align:center;color:var(--muted);font-size:13px}
+.empty svg{width:34px;height:34px;stroke:var(--faint);fill:none;stroke-width:1.6;margin-bottom:10px}
+
+/* donut */
+.donutrow{display:flex;align-items:center;gap:22px}
+.donut{width:128px;height:128px;flex:none}
+.dleg{display:flex;flex-direction:column;gap:10px;flex:1}
+.dlrow{display:grid;grid-template-columns:12px 1fr auto;align-items:center;gap:10px;font-size:13px}
+.dlrow .sw{width:12px;height:12px;border-radius:4px}
+.dlrow .nm{color:var(--muted)}
+.dlrow .vl{font-family:var(--f-num);font-weight:600;font-variant-numeric:tabular-nums}
+
+/* responsive shell */
+@media(max-width:860px){
+  .shell{grid-template-columns:1fr}
+  .rail{position:fixed;left:0;top:0;bottom:0;width:248px;transform:translateX(-100%);transition:transform .3s var(--ease);box-shadow:var(--e3)}
+  .rail.open{transform:none}
+  .page{padding:22px 18px 90px}
+  .topbar{padding:0 18px}
+}
+
+/* print */
+@media print{
+  .rail,.topbar,.vizswitch,.tabletools,.whatif{display:none!important}
+  body,.scroll{overflow:visible;height:auto}
+  .shell{display:block;height:auto}
+  .card,.stat,.itile,.hero{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
+  .hidden{display:block!important}
+}
+
+/* ── DRILL-DOWN INTERACTIVITY ── */
+.clickchip{cursor:pointer;transition:filter .15s var(--ease),transform .12s var(--ease)}
+.clickchip:hover{filter:brightness(.96);transform:translateY(-1px)}
+.linklike{cursor:pointer;transition:color .12s var(--ease)}
+.hbn.linklike:hover,.cellmain.linklike:hover{text-decoration:underline;text-underline-offset:2px}
+.wfstep:hover .bar{opacity:.85}
+.wfstep:hover{filter:drop-shadow(0 4px 10px rgba(15,129,67,.18))}
+.hm .thclick{cursor:pointer;transition:color .12s var(--ease)}
+.hm .thclick:hover{color:var(--green)}
+.hm .rl .linklike:hover{text-decoration:underline;text-underline-offset:2px}
+
+/* active-filter bar */
+.filterbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--green-wash)}
+.filterbar .fbk{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:700;margin-right:2px}
+.fchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--green-deep);
+  background:var(--panel);border:1px solid var(--green-line);border-radius:9px;padding:4px 6px 4px 11px}
+:root[data-theme="dark"] .fchip{color:var(--green-bright)}
+.fchip button{display:grid;place-items:center;width:18px;height:18px;border:0;background:none;cursor:pointer;
+  color:var(--muted);border-radius:5px;transition:.12s var(--ease)}
+.fchip button:hover{background:var(--danger-soft);color:var(--danger)}
+.fchip button svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.2}
+.fclear{margin-left:auto;font-size:12px;font-weight:600;color:var(--muted);background:none;border:0;cursor:pointer;padding:4px 8px;border-radius:8px}
+.fclear:hover{color:var(--danger);background:var(--danger-soft)}
+
+/* ── command palette ── */
+.cmdkScrim{position:fixed;inset:0;background:rgba(10,18,14,.46);backdrop-filter:blur(3px);z-index:90;display:none}
+.cmdkScrim.show{display:block}
+.cmdk{position:fixed;top:11vh;left:50%;transform:translateX(-50%);width:min(640px,94vw);z-index:91;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--e3);overflow:hidden;display:none}
+.cmdk.show{display:block;animation:rise .16s var(--ease-out) both}
+.cmdk .ci{display:flex;align-items:center;gap:11px;padding:15px 18px;border-bottom:1px solid var(--line)}
+.cmdk .ci svg{width:18px;height:18px;stroke:var(--dim);fill:none;stroke-width:1.9}
+.cmdk .ci input{flex:1;border:0;outline:0;background:transparent;color:var(--text);font-family:var(--f-body);font-size:16px}
+.cmdk .cl{max-height:54vh;overflow:auto;padding:7px}
+.cmdk .it{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:13.5px}
+.cmdk .it.on,.cmdk .it:hover{background:var(--green-soft)}
+.cmdk .it .k{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--green-deep);
+  background:var(--green-wash);border:1px solid var(--green-line);border-radius:6px;padding:2px 7px;flex:none}
+:root[data-theme="dark"] .cmdk .it .k{color:var(--green-bright)}
+.cmdk .it .lb{flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmdk .it .mt{font-size:11.5px;color:var(--dim);font-family:var(--f-num)}
+.cmdk .ce{padding:26px;text-align:center;color:var(--dim);font-size:13px}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="shell">
+  <!-- NAVIGATION RAIL -->
+  <nav class="rail">
+    <div class="brand">
+      <img class="mark" src="contoso-mark.png" alt="Contoso" style="object-fit:contain"/>
+      <div class="wm"><span class="k">CONTOSO</span><span class="n">Prism</span></div>
+    </div>
+
+    <div id="nav"></div>
+
+    <div class="spacer"></div>
+    <button class="railtool" id="themeBtn">
+      <svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>
+      <span>Theme</span></button>
+    <button class="railtool" id="printBtn">
+      <svg viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+      <span>Print Dashboard</span></button>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb"><span class="pre" id="bcPre">Contoso · Intelligent Software Asset & FinOps Governance Platform (ISAFGP)</span><h1 id="bcTitle">Overview</h1></div>
+      <div class="grow"></div>
+      <span class="pill sample" id="samplePill"><span class="dot"></span>Sample data</span>
+      <span class="pill ro"><span class="dot"></span>Read-only</span>
+      <button class="qbtn" id="searchBtn" title="Search (⌘K)">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+    </header>
+
+    <div class="scroll" id="scroll">
+      <div class="page" id="page"></div>
+    </div>
+  </div>
+</div>
+
+<!-- COMMAND PALETTE -->
+<div class="cmdkScrim" id="cmdkScrim"></div>
+<div class="cmdk" id="cmdk">
+  <div class="ci"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input id="cmdkInput" placeholder="Search users, devices, licenses, apps, departments…" autocomplete="off" spellcheck="false"></div>
+  <div class="cl" id="cmdkList"></div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   DATA LAYER - API-compatible with production Prism (verbatim contract) · v2
+   ════════════════════════════════════════════════════════════════════════ */
+function buildSample(){
+  const skus=[{p:"SPE_E5",n:"Microsoft 365 E5",u:57},{p:"SPE_E3",n:"Microsoft 365 E3",u:36},{p:"ENTERPRISEPACK",n:"Office 365 E3",u:23},
+    {p:"SPB",n:"Microsoft 365 Business Premium",u:22},{p:"SPE_F1",n:"Microsoft 365 F3",u:8},{p:"Microsoft_365_Copilot",n:"Microsoft 365 Copilot",u:30},
+    {p:"POWER_BI_PRO",n:"Power BI Pro",u:14},{p:"VISIOCLIENT",n:"Visio Plan 2",u:15},{p:"PROJECTPROFESSIONAL",n:"Project Plan 3",u:30}];
+  const first=["Sanne","Lars","Mei","Tom","Pieter","Julia","Henk","Femke","Joost","Karin","Bram","Nina","Ralf","Eva","Dirk","Anouk","Stefan","Lotte","Wout","Ingrid","Marco","Sven","Daan","Lieke","Ron","Petra","Koen","Maaike","Bas","Hanna","Ruud","Sofie"];
+  const last=["de Vries","Jansen","Bakker","Visser","Smit","Meijer","Mulder","Bos","Vos","Peters","Hendriks","Dijkstra","Schmidt","Müller","Weber","Andersen","Nielsen"];
+  const dept=["Salt Production","Chlor-Alkali","Hydrogen","Energy Storage","Engineering","Finance","IT","HR","Procurement","Sales","R&D","Logistics"];
+  let s=20260605;const rnd=()=>{s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff;};
+  const pick=a=>a[Math.floor(rnd()*a.length)];
+  const region=()=>{const r=rnd();return r<.6?"NL":r<.9?"DE":"DK";};
+  const arch=[
+    {v:"RECLAIM",sc:[88,99],cf:"HIGH",rs:["DISABLED_ACCOUNT","CHECK_RETENTION_OR_SHARED"],idle:[120,400]},
+    {v:"RECLAIM",sc:[88,99],cf:"HIGH",rs:["OFFBOARDED","CHECK_RETENTION_OR_SHARED"],idle:[95,260]},
+    {v:"RECLAIM",sc:[82,96],cf:"HIGH",rs:["NO_ACTIVITY_90D"],idle:[92,210]},
+    {v:"RECLAIM",sc:[84,97],cf:"HIGH",rs:["NO_ACTIVITY_90D","APP_UNUSED"],idle:[100,240]},
+    {v:"REVIEW",sc:[60,78],cf:"MEDIUM",rs:["NO_ACTIVITY_60D"],idle:[60,89]},
+    {v:"REVIEW",sc:[55,75],cf:"MEDIUM",rs:["NEVER_ACTIVE"],idle:[null,null]},
+    {v:"REVIEW",sc:[45,70],cf:"MEDIUM",rs:["SERVICE_ACCOUNT_SUSPECTED"],idle:[70,180],svc:true},
+    {v:"REVIEW",sc:[45,68],cf:"LOW",rs:["POSSIBLE_SHARED_OR_SERVICE"],idle:[80,200],shared:true},
+    {v:"REVIEW",sc:[42,58],cf:"MEDIUM",rs:["NO_ACTIVITY_30D"],idle:[30,59]},
+    {v:"REVIEW",sc:[58,74],cf:"MEDIUM",rs:["NEVER_ACTIVE","ACTIVITY_CONCEALED"],idle:[null,null]}];
+  const rows=[];
+  for(let i=0;i<54;i++){
+    const a=pick(arch);const sku=pick(rnd()<.42?[skus[0],skus[5],skus[6],skus[8],skus[7]]:skus);
+    const reasons=[...a.rs];
+    if(["SPE_E5","Microsoft_365_Copilot"].includes(sku.p))reasons.push("HIGH_VALUE");
+    if(rnd()<.06)reasons.push("DIRECT_ASSIGNMENT");
+    const score=Math.round(a.sc[0]+rnd()*(a.sc[1]-a.sc[0]));
+    const idle=a.idle[0]==null?null:Math.round(a.idle[0]+rnd()*(a.idle[1]-a.idle[0]));
+    const fn=pick(first),ln=pick(last);
+    let display=`${fn} ${ln}`,upn=`${fn}.${ln}`.toLowerCase().replace(/[^a-z.]/g,'')+"@contoso.com";
+    if(a.svc){display=pick(["svc-sap-integration","svc-backup-runner","svc-monitoring"]);upn=display+"@contoso.com";}
+    if(a.shared){display=pick(["Reception NL","Invoices Shared","HR Mailbox","Plant Control Room"]);upn=display.toLowerCase().replace(/ /g,'.')+"@contoso.com";}
+    rows.push({userId:"u"+i,skuId:sku.p,userPrincipalName:upn,displayName:display,department:pick(dept),country:region(),
+      skuName:sku.n,skuPartNumber:sku.p,verdict:a.v,wasteScore:score,confidence:a.cf,reasonCodes:reasons.join(","),
+      effectiveInactiveDays:idle,estMonthlySavings:sku.u,currency:"EUR"});
+  }
+  const util=[["SPE_E5","Microsoft 365 E5",420,392,57],["SPE_E3","Microsoft 365 E3",610,585,36],["ENTERPRISEPACK","Office 365 E3",240,228,23],
+    ["SPB","Microsoft 365 Business Premium",120,118,22],["SPE_F1","Microsoft 365 F3",520,474,8],["Microsoft_365_Copilot","Microsoft 365 Copilot",150,96,30],
+    ["POWER_BI_PRO","Power BI Pro",200,171,14],["VISIOCLIENT","Visio Plan 2",90,73,15],["PROJECTPROFESSIONAL","Project Plan 3",60,60,null]]
+    .map(([p,n,o,as,u])=>{const idle=o-as;return{skuId:p,skuPartNumber:p,skuName:n,seatsOwned:o,seatsAssigned:as,seatsIdle:idle,
+      verdict:idle===0?"KEEP":(idle<=2?"REVIEW":"RECLAIM"),unit:u,estMonthlySavings:u==null?null:idle*u,
+      reasonCodes:idle===0?"":(idle<=2?"SEAT_BUFFER":"UNASSIGNED_SEATS")};});
+  const unpriced=[{skuPartNumber:"PROJECTPROFESSIONAL",skuName:"Project Plan 3",seatsOwned:60}];
+  const reclaim=rows.filter(r=>r.verdict==="RECLAIM"),review=rows.filter(r=>r.verdict==="REVIEW");
+  const sum=a=>a.reduce((t,r)=>t+(r.estMonthlySavings||0),0);
+  const idleSeat=util.reduce((t,x)=>t+(x.verdict!=="KEEP"?(x.estMonthlySavings||0):0),0);
+  const months=["Nov","Dec","Jan","Feb","Mar","Apr","May","Jun"];
+  const factors=[1.46,1.40,1.33,1.27,1.19,1.12,1.05,1.0];
+  const rsum=sum(reclaim),vsum=sum(review);
+  const history=months.map((m,i)=>({label:m,scoredUtc:`2026-${String(i<2?11+i:i-1).padStart(2,'0')}-05`,
+    reclaim:Math.round(rsum*factors[i]),review:Math.round(vsum*factors[i]),idleSeat:Math.round(idleSeat*factors[i])}));
+  const summary={runId:"SAMPLE",scoredUtc:new Date().toISOString(),currency:"EUR",
+    assignments:rows.length+1240,keepCount:1240,reviewCount:review.length,reclaimCount:reclaim.length,
+    reclaimMonthlySavings:sum(reclaim),reviewMonthlySavings:sum(review),idleSeatMonthlySavings:idleSeat};
+  const watchedApps=[
+    {name:"Autodesk Navisworks Manage",vendor:"Autodesk",licenseModel:"PAID",installDeviceCount:34,annualUnitCost:2500,annualExposure:85000,costConfidence:"LIST"},
+    {name:"Adobe Photoshop",vendor:"Adobe",licenseModel:"PAID",installDeviceCount:96,annualUnitCost:360,annualExposure:34560,costConfidence:"LIST"},
+    {name:"PHA-Pro",vendor:"Sphera",licenseModel:"PAID",installDeviceCount:18,annualUnitCost:1500,annualExposure:27000,costConfidence:"ESTIMATE"},
+    {name:"Meridian",vendor:"Accruent",licenseModel:"PAID",installDeviceCount:22,annualUnitCost:1000,annualExposure:22000,costConfidence:"ESTIMATE"},
+    {name:"think-cell",vendor:"think-cell",licenseModel:"PAID",installDeviceCount:74,annualUnitCost:200,annualExposure:14800,costConfidence:"LIST"},
+    {name:"Claude",vendor:"Anthropic",licenseModel:"PAID",installDeviceCount:40,annualUnitCost:240,annualExposure:9600,costConfidence:"ESTIMATE"},
+    {name:"Navisworks Freedom",vendor:"Autodesk",licenseModel:"FREE",installDeviceCount:51,annualUnitCost:0,annualExposure:0,costConfidence:"KNOWN"},
+    {name:"SAP GUI",vendor:"SAP",licenseModel:"FREE",installDeviceCount:610,annualUnitCost:0,annualExposure:0,costConfidence:"KNOWN"},
+    {name:"OpenText DesktopLink",vendor:"OpenText",licenseModel:"UNKNOWN",installDeviceCount:28,annualUnitCost:null,annualExposure:null,costConfidence:"UNKNOWN"}];
+  const rightsize=[
+    {userPrincipalName:'a.dijkstra@contoso.com',displayName:'Anna Dijkstra',department:'Finance',fromSku:'SPE_E5',fromName:'Microsoft 365 E5',fromCost:55,toSku:'SPE_E3',toName:'Microsoft 365 E3',toCost:24.68,monthlyDelta:30.32,effectiveInactiveDays:62,confidence:'MEDIUM'},
+    {userPrincipalName:'p.jansen@contoso.com',displayName:'Pieter Jansen',department:'Operations',fromSku:'ENTERPRISEPREMIUM',fromName:'Office 365 E5',fromCost:38,toSku:'ENTERPRISEPACK',toName:'Office 365 E3',toCost:24,monthlyDelta:14,effectiveInactiveDays:71,confidence:'MEDIUM'},
+    {userPrincipalName:'s.novak@contoso.com',displayName:'Sofia Novak',department:'HR',fromSku:'PROJECTPREMIUM',fromName:'Project Plan 5',fromCost:37.84,toSku:'PROJECTPROFESSIONAL',toName:'Project Plan 3',toCost:20.64,monthlyDelta:17.20,effectiveInactiveDays:58,confidence:'LOW'}];
+  const overlap=[
+    {userPrincipalName:'m.bauer@contoso.com',displayName:'Max Bauer',department:'IT',redundantPart:'ENTERPRISEPACK',redundantName:'Office 365 E3',monthlyWaste:24,coveredByName:'Microsoft 365 E3'},
+    {userPrincipalName:'l.rossi@contoso.com',displayName:'Luca Rossi',department:'Sales',redundantPart:'EMS',redundantName:'Enterprise Mobility + Security E3',monthlyWaste:11,coveredByName:'Microsoft 365 E3'},
+    {userPrincipalName:'n.smit@contoso.com',displayName:'Nina Smit',department:'Engineering',redundantPart:'POWER_BI_PRO',redundantName:'Power BI Pro',monthlyWaste:6.87,coveredByName:'Microsoft 365 E5'}];
+  const renewals=[
+    {skuPartNumber:'SPE_E3',skuName:'Microsoft 365 E3',renewalDate:'2026-07-01',term:'3-year EA',quantityOwned:2080,daysToRenewal:22,seatsAssigned:1980,seatsIdle:100,idleMonthly:2468,reclaimSeats:140,reclaimMonthly:3455,recoverableMonthly:5923},
+    {skuPartNumber:'Microsoft_365_Copilot',skuName:'Microsoft 365 Copilot',renewalDate:'2026-09-15',term:'Annual',quantityOwned:150,daysToRenewal:98,seatsAssigned:96,seatsIdle:54,idleMonthly:1516,reclaimSeats:12,reclaimMonthly:337,recoverableMonthly:1853}];
+  const reallocation=[
+    {skuPartNumber:'SPE_E3',skuName:'Microsoft 365 E3',idleSeats:100,reclaimableSeats:140,recoverablePool:240,monthlyUnitCost:24.68,poolMonthlyValue:5923},
+    {skuPartNumber:'Microsoft_365_Copilot',skuName:'Microsoft 365 Copilot',idleSeats:54,reclaimableSeats:12,recoverablePool:66,monthlyUnitCost:28.08,poolMonthlyValue:1853},
+    {skuPartNumber:'POWER_BI_PRO',skuName:'Power BI Pro',idleSeats:29,reclaimableSeats:8,recoverablePool:37,monthlyUnitCost:6.87,poolMonthlyValue:254}];
+  const licenseUsage=[
+    {userPrincipalName:'a.dijkstra@contoso.com',displayName:'Anna Dijkstra',department:'Finance',skuName:'Visio Plan 2',skuPartNumber:'VISIOCLIENT',fgActiveHours90:0,activeDays90:0,lastUsedDate:null,usageVerdict:'Unused',reclaimableMonthly:10.98},
+    {userPrincipalName:'p.jansen@contoso.com',displayName:'Pieter Jansen',department:'Operations',skuName:'Project Plan 3',skuPartNumber:'PROJECTPROFESSIONAL',fgActiveHours90:0,activeDays90:0,lastUsedDate:null,usageVerdict:'Unused',reclaimableMonthly:20.64},
+    {userPrincipalName:'n.smit@contoso.com',displayName:'Nina Smit',department:'Engineering',skuName:'Power BI Pro',skuPartNumber:'POWER_BI_PRO',fgActiveHours90:0,activeDays90:0,lastUsedDate:'2026-02-14',usageVerdict:'Unused',reclaimableMonthly:6.87}];
+  // ── synthetic estate graph so EVERY entity drills richly in sample mode ──
+  // (devices per user, app installs per device with version + agent usage). With a live
+  // database these come from /api/drill instead; this only powers the offline demo.
+  const osPool=[["Windows 11 Enterprise","10.0.22631"],["Windows 11 Enterprise","10.0.22000"],["Windows 10 Enterprise","10.0.19045"],["macOS Sonoma","14.5"]];
+  const compliancePool=["Compliant","Compliant","Compliant","NonCompliant","InGracePeriod"];
+  const modelPool=[["Dell","Latitude 7440"],["HP","EliteBook 840 G10"],["Lenovo","ThinkPad X1 Carbon"],["Apple","MacBook Pro 14"]];
+  const distinctUsers=[...new Map(rows.map(r=>[r.userId,r])).values()];
+  const devices=[];
+  distinctUsers.forEach((u,ui)=>{
+    const nd=1+(rnd()<.34?1:0);
+    for(let k=0;k<nd;k++){const [os,ov]=pick(osPool),[mf,mo]=pick(modelPool);
+      devices.push({deviceName:`NB-${u.country}-${1000+ui*3+k}`,deviceId:`d${ui}-${k}`,userId:u.userId,userPrincipalName:u.userPrincipalName,
+        displayName:u.displayName,department:u.department,country:u.country,operatingSystem:os,osVersion:ov,
+        complianceState:pick(compliancePool),manufacturer:mf,model:mo,lastSync:`2026-06-${String(2+Math.floor(rnd()*22)).padStart(2,'0')}`});}
+  });
+  const verPool={Photoshop:['25.9.1','25.7.0','24.6.0'],Navisworks:['2024.3','2024.1','2023.4'],'SAP GUI':['8.00 p5','7.70 p12'],'think-cell':['13.4','13.2'],Claude:['1.8.0','1.7.2'],Meridian:['2023.1','2022.3'],'PHA-Pro':['8.6','8.4'],DesktopLink:['23.4','22.1']};
+  const installs=[];
+  watchedApps.forEach(app=>{
+    const key=Object.keys(verPool).find(k=>app.name.includes(k));const vers=key?verPool[key]:['2024.2','2024.1','2023.5'];
+    const n=Math.max(3,Math.min(devices.length,Math.round((app.installDeviceCount||10)*0.3)));
+    const subset=[...devices].sort(()=>rnd()-.5).slice(0,n);
+    subset.forEach(d=>{const roll=rnd();const hrs=roll<.5?Math.round(rnd()*140):roll<.8?Math.round(rnd()*14):0;
+      installs.push({app:app.name,vendor:app.vendor,deviceName:d.deviceName,userPrincipalName:d.userPrincipalName,displayName:d.displayName,
+        department:d.department,country:d.country,version:pick(vers),fgActiveHours90:hrs,activeDays90:hrs>0?Math.min(90,Math.round(hrs/3)):0,
+        usageState:hrs>40?'Active':hrs>5?'Light':hrs>0?'Open-only':'Dormant',lastUsedDate:hrs>0?`2026-0${1+Math.floor(rnd()*6)}-${String(1+Math.floor(rnd()*27)).padStart(2,'0')}`:null});});
+  });
+  return {summary,reviewQueue:rows,skus:util,unpriced,history,watchedApps,rightsize,overlap,renewals,reallocation,licenseUsage,devices,installs,isSample:true};
+}
+
+let DATA=null, TAB='overview', VIZ='waterfall', confThreshold=0;
+let qSort={key:'estMonthlySavings',dir:-1}, qSearch='', qVerdict='ALL', qConf='ALL', qDept='ALL', qRegion='ALL', qSku='ALL', qTier='ALL';
+let DETAIL=null;        // {type, key} when viewing an entity profile
+let lastTab='overview'; // to support a Back action from detail views
+
+async function load(){
+  try{
+    const [a,b,c,d,e,f]=await Promise.all([fetch('api/summary'),fetch('api/review-queue'),fetch('api/skus'),fetch('api/unpriced'),fetch('api/history'),fetch('api/watched-apps').catch(()=>null)]);
+    if(!a.ok)throw 0;
+    let watchedApps=[];try{if(f&&f.ok)watchedApps=await f.json();}catch(_){}
+    DATA={summary:await a.json(),reviewQueue:await b.json(),skus:await c.json(),unpriced:await d.json(),watchedApps,isSample:false,
+      history:(await e.json()).reverse().map(h=>({label:new Date(h.scoredUtc).toLocaleString('en',{month:'short'}),scoredUtc:h.scoredUtc,reclaim:h.reclaimMonthlySavings||0,review:h.reviewMonthlySavings||0,idleSeat:h.idleSeatMonthlySavings||0})),
+      rightsize:[],overlap:[],renewals:[],reallocation:[],licenseUsage:[]};
+  }catch(_){ DATA=buildSample(); }
+  // live mode: also pull the optimise + governance views (sample mode already has them)
+  if(!DATA.isSample){
+    try{const[g,h,i,j,k]=await Promise.all(['api/rightsize','api/overlap','api/renewals','api/reallocation','api/license-usage'].map(u=>fetch(u).catch(()=>null)));
+      DATA.rightsize=g&&g.ok?await g.json():[];DATA.overlap=h&&h.ok?await h.json():[];DATA.renewals=i&&i.ok?await i.json():[];DATA.reallocation=j&&j.ok?await j.json():[];DATA.licenseUsage=k&&k.ok?await k.json():[];}catch(_){}
+    try{const[da,ds]=await Promise.all([fetch('api/direct-assignments').catch(()=>null),fetch('api/direct-assignment-summary').catch(()=>null)]);
+      DATA.directAssignments=da&&da.ok?await da.json():[];DATA.directSummary=ds&&ds.ok?await ds.json():[];}catch(_){}
+  }
+  document.getElementById('samplePill').classList.toggle('hidden', !DATA.isSample);
+  boot();
+}
+
+/* ── formatting helpers ── */
+const eur=n=>'€'+Math.round(n||0).toLocaleString('en-US');
+const eur1=n=>'€'+(n||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const escq=s=>(s==null?'':String(s)).replace(/"/g,'&quot;');
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+/* ── derived analytics (shared by many views) ── */
+function flagged(){return DATA.reviewQueue.filter(r=>r.verdict!=='KEEP');}
+function sumSav(a){return a.reduce((t,r)=>t+(r.estMonthlySavings||0),0);}
+function idleSeatTotal(){return DATA.skus.reduce((t,x)=>t+(x.verdict!=='KEEP'?(x.estMonthlySavings||0):0),0);}
+</script>
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   NAVIGATION & ROUTING
+   ════════════════════════════════════════════════════════════════════════ */
+const NAV=[
+  {id:'overview',label:'Overview',title:'Overview',icon:'<path d="M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10"/>'},
+  {id:'queue',label:'Review Queue',title:'Review Queue',icon:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',badge:()=>flagged().length},
+  {id:'apps',label:'Applications',title:'Applications',icon:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'},
+  {id:'licenses',label:'Licenses & Pricing',title:'Licenses & Pricing',icon:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>'},
+  {id:'optimise',label:'Optimise',title:'Optimise',icon:'<path d="M3 17l6-6 4 4 8-8M21 7v5M21 7h-5"/>'},
+];
+function renderNav(){
+  document.getElementById('nav').innerHTML='<div class="navlabel">Workspace</div>'+NAV.map(n=>{
+    const b=n.badge?n.badge():0;
+    return `<div class="navitem${n.id===TAB?' on':''}" data-tab="${n.id}">${svg(n.icon)}<span>${n.label}</span>${b?`<span class="badge tnum">${b}</span>`:''}</div>`;
+  }).join('');
+  document.querySelectorAll('.navitem').forEach(el=>el.onclick=()=>go(el.dataset.tab));
+}
+function svg(inner){return `<svg viewBox="0 0 24 24">${inner}</svg>`;}
+
+/* ── filter reset so each drill is clean ── */
+function resetQueueFilters(){qSearch='';qVerdict='ALL';qConf='ALL';qDept='ALL';qRegion='ALL';qSku='ALL';qTier='ALL';qSort={key:'estMonthlySavings',dir:-1};}
+
+/* ── DRILL: clear filters, apply a slice, jump to a tab (default queue) ── */
+function drill(filters, tab){
+  resetQueueFilters();
+  filters=filters||{};
+  if(filters.verdict)qVerdict=filters.verdict;
+  if(filters.conf)qConf=filters.conf;
+  if(filters.dept)qDept=filters.dept;
+  if(filters.region)qRegion=filters.region;
+  if(filters.sku)qSku=filters.sku;
+  if(filters.tier)qTier=filters.tier;
+  if(filters.search)qSearch=filters.search;
+  DETAIL=null;
+  go(tab||'queue');
+}
+
+/* ── DETAIL: open an entity profile ── */
+function detail(type,key){
+  lastTab=(TAB==='detail')?lastTab:TAB;
+  DETAIL={type,key};
+  TAB='detail';
+  document.getElementById('bcTitle').textContent=detailTitle(type,key);
+  document.querySelectorAll('.navitem').forEach(el=>el.classList.remove('on'));
+  document.getElementById('scroll').scrollTop=0;
+  renderPage();
+}
+function detailTitle(type,key){
+  const m={dept:'Department',user:'User',sku:'License',app:'Application',vendor:'Vendor',country:'Region',device:'Device'};
+  return (m[type]||'Detail')+' · '+key;
+}
+
+function go(id){
+  if(id!=='detail')DETAIL=null;
+  TAB=id;
+  const n=NAV.find(x=>x.id===id);
+  if(n)document.getElementById('bcTitle').textContent=n.title;
+  document.querySelectorAll('.navitem').forEach(el=>el.classList.toggle('on',el.dataset.tab===id));
+  document.getElementById('scroll').scrollTop=0;
+  renderPage();
+  document.querySelector('.rail')?.classList.remove('open');
+}
+function renderPage(){
+  const p=document.getElementById('page');
+  p.innerHTML='';
+  if(TAB==='detail'&&DETAIL){viewDetail(p);installSortables();countUp();return;}
+  ({overview:viewOverview,queue:viewQueue,apps:viewApps,licenses:viewLicenses,optimise:viewOptimise}[TAB]||viewOverview)(p);
+  // post-render wiring
+  installSortables();
+  countUp();
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   OVERVIEW - the narrative spine (Acts I–IV)
+   ════════════════════════════════════════════════════════════════════════ */
+function viewOverview(root){
+  const s=DATA.summary;
+  const fl=flagged();
+  const annual=(s.reclaimMonthlySavings+s.reviewMonthlySavings)*12;
+  const hiConf=sumSav(fl.filter(r=>r.confidence==='HIGH'));
+  const totFlag=sumSav(fl);
+  const idle=idleSeatTotal();
+
+  // ACT I - hero
+  const wrap=document.createElement('div');
+  wrap.className='reveal';
+  wrap.innerHTML=`
+    <p class="lede" style="margin:2px 2px 18px">License waste and recoverable spend across the Microsoft&nbsp;365 estate &mdash; read-only intelligence from Microsoft telemetry. Prism recommends; <b>you decide</b>.</p>
+    <div class="hero">
+      <div class="left">
+        <div class="biglabel"><span class="eyebrow">Recoverable spend / year</span></div>
+        <div class="num"><span class="cur">€</span><span data-count="${Math.round(annual)}">0</span></div>
+        <p class="subline">Across <b>${fl.length} flagged assignments</b> and <b>${DATA.skus.filter(x=>x.verdict!=='KEEP').length} under-used SKUs</b>. At today&rsquo;s run, <b>${eur(s.reclaimMonthlySavings+s.reviewMonthlySavings)}/mo</b> is identified as recoverable.</p>
+        <div class="metarow">
+          <span class="chip reclaim clickchip" onclick="drill({verdict:'RECLAIM'})"><span class="d"></span>${s.reclaimCount} reclaim</span>
+          <span class="chip review clickchip" onclick="drill({verdict:'REVIEW'})"><span class="d"></span>${s.reviewCount} review</span>
+          <span class="chip hi clickchip" onclick="drill({conf:'HIGH'})"><span class="d"></span>${eur(hiConf)}/mo high-confidence</span>
+        </div>
+      </div>
+      <div class="right">
+        <div class="rlabel"><span class="eyebrow">How bankable is it?</span><span class="q">conf. split</span></div>
+        <div id="ribbon"></div>
+        <div id="ribleg"></div>
+        <div class="whatif">
+          <div class="wlabel"><span>Minimum confidence to action</span><b id="wifVal">All bands</b></div>
+          <input type="range" id="wif" min="0" max="2" step="1" value="0">
+          <div class="wscale"><span>All</span><span>Medium+</span><span>High only</span></div>
+        </div>
+      </div>
+    </div>`;
+  root.appendChild(wrap);
+
+  // KPI stat strip
+  const stats=document.createElement('div');
+  stats.className='stats reveal';stats.style.animationDelay='.05s';
+  stats.innerHTML=[
+    statCard('savings','Potential savings','dollar',eur(s.reclaimMonthlySavings+s.reviewMonthlySavings)+'<small>/mo</small>',`${eur(annual)}/yr at current run`,"drill({})"),
+    statCard('flagged','Licenses flagged','flag',String(fl.length),`${s.reclaimCount} reclaim · ${s.reviewCount} review`,"drill({})"),
+    statCard('idle','Idle (unassigned) seats','user',String(DATA.skus.reduce((t,x)=>t+x.seatsIdle,0)),`${eur(idle)}/mo, budgeted at renewal`,"go('licenses')"),
+    statCard('cover','Pricing coverage','shield',Math.round(100*(DATA.skus.filter(x=>x.unit!=null).length)/DATA.skus.length)+'%',`${DATA.unpriced.length} SKU unpriced`,"go('licenses')"),
+  ].join('');
+  root.appendChild(stats);
+
+  // ACT II - concentration + signature viz
+  root.appendChild(sectionHead('Where the waste lives','The concentration story &mdash; switch between the financial waterfall and the department heatmap.',`
+    <div class="vizswitch" id="vizswitch">
+      <button data-v="waterfall" class="${VIZ==='waterfall'?'on':''}">${svg('<path d="M3 3v18h18"/><rect x="6" y="10" width="3" height="8"/><rect x="11" y="6" width="3" height="12"/><rect x="16" y="13" width="3" height="5"/>')}Waterfall</button>
+      <button data-v="heatmap" class="${VIZ==='heatmap'?'on':''}">${svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>')}Heatmap</button>
+    </div>`));
+  const vizCard=document.createElement('div');
+  vizCard.className='card reveal';vizCard.id='vizCard';
+  root.appendChild(vizCard);
+  renderViz();
+
+  // cross-referenced insight tiles
+  root.appendChild(sectionHead('At a glance','Cross-referenced signals that turn the numbers into a plan.'));
+  const ins=document.createElement('div');ins.className='insights reveal';ins.id='insightTiles';
+  root.appendChild(ins);
+  renderInsightTiles();
+
+  // ACT III - what to do
+  root.appendChild(sectionHead('What to do first','Highest-value, high-confidence seats &mdash; the fastest path to recovered spend.',`<span class="act" onclick="go('queue')">Open Review Queue ${svg('<path d="M5 12h14M13 6l6 6-6 6"/>')}</span>`));
+  const act3=document.createElement('div');act3.className='g12';
+  act3.innerHTML=`
+    <div class="card"><div class="ch"><h3>Quick wins</h3><div class="sub">Ranked by confidence, then value. Click to inspect the case.</div></div><div class="cb"><div class="qw" id="quickwins"></div></div></div>
+    <div class="card"><div class="ch"><h3>Recoverable by department</h3><div class="sub">Accountability view for showback.</div></div><div class="cb"><div class="hbars" id="deptbars"></div></div></div>`;
+  root.appendChild(act3);
+  renderQuickWins();renderDeptBars();
+
+  // ACT III.5 - governance: direct license assignments (deviation from group-based model)
+  root.appendChild(sectionHead('Governance · direct license assignments','Licenses assigned directly to a user instead of via a group - Contoso\'s standard model is group-based, so these are the deviations to review. Click any user, department or license to drill in.'));
+  const gov=document.createElement('div');gov.className='card reveal';gov.innerHTML='<div class="cb"><div id="directAssign"></div></div>';
+  root.appendChild(gov);
+  renderDirectAssignments();
+
+  // trend + ACT IV proof
+  root.appendChild(sectionHead('Trajectory & assurance','Identified recoverable spend over time, and the governance that keeps Prism safe.'));
+  const last=document.createElement('div');last.className='g12';
+  last.innerHTML=`
+    <div class="card"><div class="ch"><h3>Recoverable spend over time</h3><div class="sub" id="trendSub"></div></div><div class="cb"><div id="trend"></div></div></div>
+    <div class="card"><div class="ch"><h3>Why you can trust this</h3></div><div class="cb"><div id="assurance"></div></div></div>`;
+  root.appendChild(last);
+  renderTrend();renderAssurance();
+
+  // wire hero interactions
+  renderRibbon();wireWhatIf();
+  document.querySelectorAll('#vizswitch button').forEach(b=>b.onclick=()=>{VIZ=b.dataset.v;
+    document.querySelectorAll('#vizswitch button').forEach(x=>x.classList.toggle('on',x.dataset.v===VIZ));renderViz();});
+}
+
+function statCard(id,label,icon,val,foot,action){
+  const ic={dollar:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+    flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V4s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22V4"/>',
+    user:'<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/>',
+    shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'}[icon];
+  return `<div class="stat click" onclick="${action}">
+    <div class="top"><span class="lbl">${label}</span><span class="ic">${svg(ic)}</span></div>
+    <div class="v tnum">${val}</div><div class="foot">${foot}</div></div>`;
+}
+
+function sectionHead(title,sub,action){
+  const d=document.createElement('div');d.className='sechead';
+  d.innerHTML=`<div class="t"><h2>${title}</h2>${sub?`<span class="s">${sub}</span>`:''}</div>${action||''}`;
+  return d;
+}
+
+/* ── confidence ribbon (hero right) ── */
+function renderRibbon(){
+  const fl=flagged();
+  const band={HIGH:{a:0,n:0},MEDIUM:{a:0,n:0},LOW:{a:0,n:0}};
+  fl.forEach(r=>{const b=band[r.confidence]||band.LOW;b.a+=(r.estMonthlySavings||0);b.n++;});
+  const tot=band.HIGH.a+band.MEDIUM.a+band.LOW.a||1;
+  const meta=[['HIGH','High','var(--green)'],['MEDIUM','Medium','var(--review)'],['LOW','Low','var(--dim)']];
+  document.getElementById('ribbon').innerHTML='<div class="ribbon">'+meta.map(([k,l,c])=>{
+    const p=100*band[k].a/tot;return p>0?`<div class="s" style="width:${p}%;background:${c};cursor:pointer" title="${l} confidence · ${eur(band[k].a)}/mo" onclick="drill({conf:'${k}'})">${p>13?eur(band[k].a):''}</div>`:'';}).join('')+'</div>';
+  document.getElementById('ribleg').innerHTML='<div class="ribleg">'+meta.map(([k,l,c])=>`
+    <div class="row" onclick="drill({conf:'${k}'})">
+      <span class="sw" style="background:${c}"></span><span class="nm">${l} confidence</span>
+      <span class="ct tnum">${band[k].n} seat${band[k].n!==1?'s':''}</span>
+      <span class="vl">${eur(band[k].a)}/mo</span></div>`).join('')+'</div>';
+}
+
+function wireWhatIf(){
+  const el=document.getElementById('wif');if(!el)return;
+  const labels=['All bands','Medium &amp; up','High only'];
+  const upd=()=>{
+    confThreshold=+el.value;
+    el.style.setProperty('--p',(confThreshold/2*100)+'%');
+    document.getElementById('wifVal').innerHTML=labels[confThreshold];
+    // recompute hero number + ribbon emphasis + quick wins live
+    const rank={LOW:0,MEDIUM:1,HIGH:2};
+    const fl=flagged().filter(r=>rank[r.confidence]>=confThreshold);
+    const annual=sumSav(fl)*12;
+    const numEl=document.querySelector('.hero .num [data-count]');
+    if(numEl){numEl.dataset.count=Math.round(annual);animateNumber(numEl,Math.round(annual));}
+    renderQuickWins();
+  };
+  el.addEventListener('input',upd);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SIGNATURE VIZ A - WASTE WATERFALL
+   ════════════════════════════════════════════════════════════════════════ */
+function renderViz(){
+  const c=document.getElementById('vizCard');if(!c)return;
+  if(VIZ==='waterfall'){
+    c.innerHTML=`<div class="ch"><h3>Recoverable spend &mdash; how the opportunity builds up</h3>
+      <div class="sub">Monthly figures. Reclaimable and reviewable seats build the recoverable headline; idle (budgeted) seats add the full ceiling.</div></div>
+      <div class="wflegend">
+        <span class="l"><span class="sw" style="background:var(--danger)"></span>Reclaimable</span>
+        <span class="l"><span class="sw" style="background:var(--review)"></span>Reviewable</span>
+        <span class="l"><span class="sw" style="background:var(--green)"></span>Recoverable now</span>
+        <span class="l"><span class="sw" style="background:var(--dim)"></span>Idle (budgeted)</span>
+      </div>
+      <div class="wfwrap"><svg class="wf" id="wfsvg"></svg></div>`;
+    drawWaterfall();
+  }else{
+    c.innerHTML=`<div class="ch"><h3>Recoverable spend &mdash; department × license tier</h3>
+      <div class="sub">Where flagged value concentrates. Darker = more recoverable €/mo. Click a cell to drill into the queue.</div></div>
+      <div class="hmscale"><span>Less</span><span class="grad"></span><span>More</span><span style="margin-left:auto;color:var(--faint)">€/mo recoverable, monthly</span></div>
+      <div class="hmwrap" id="hmwrap"></div>`;
+    drawHeatmap();
+  }
+}
+
+function drawWaterfall(){
+  const svgEl=document.getElementById('wfsvg');if(!svgEl)return;
+  const s=DATA.summary;
+  const reclaim=s.reclaimMonthlySavings, review=s.reviewMonthlySavings, idle=idleSeatTotal();
+  // OPPORTUNITY BUILD-UP (monthly): the components of recoverable spend stack up to the
+  // total identified opportunity. This keeps every bar legible and is the figure a CFO acts on.
+  // Reads left→right as an additive waterfall: Reclaimable + Reviewable build the headline
+  // recoverable, then Idle (budgeted, shown for context) builds the full opportunity ceiling.
+  const steps=[
+    {label:'Reclaimable',         kind:'up',    value:reclaim, color:'var(--danger)', act:"drill({verdict:'RECLAIM'})"},
+    {label:'+ Reviewable',        kind:'up',    value:review,  color:'var(--review)', act:"drill({verdict:'REVIEW'})"},
+    {label:'Recoverable now',     kind:'total', value:reclaim+review, color:'var(--green)', act:"drill({})"},
+    {label:'+ Idle (budgeted)',   kind:'up',    value:idle,    color:'var(--dim)', act:"go('licenses')"},
+    {label:'Total opportunity',   kind:'total', value:reclaim+review+idle, color:'var(--green-deep)', act:"drill({})"},
+  ];
+  const W=svgEl.clientWidth||880, H=300, padL=10, padR=10, padT=38, padB=50;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const maxV=(reclaim+review+idle)*1.12;
+  const Y=v=>padT+plotH-(v/maxV)*plotH;
+  const n=steps.length, gap=30, bw=(plotW-gap*(n-1))/n;
+  let running=0, html='', prevRightX=null, prevY=null;
+  steps.forEach((st,i)=>{
+    const x=padL+i*(bw+gap);
+    let yTop,yBot,sign='';
+    if(st.kind==='total'){ yTop=Y(st.value); yBot=Y(0); running=st.value; }
+    else{ yBot=Y(running); running+=st.value; yTop=Y(running); sign=i===0?'':'+'; }
+    const ry=Math.min(yTop,yBot), rh=Math.max(3,Math.abs(yBot-yTop));
+    if(prevRightX!==null){
+      const yConn=(st.kind==='total')?Y(0):yBot;
+      html+=`<path class="connector" d="M${prevRightX.toFixed(1)} ${prevY.toFixed(1)} H${x.toFixed(1)}"/>`;
+    }
+    // clickable group: bar + a transparent hit area spanning the column for easy clicking
+    html+=`<g class="wfstep" style="cursor:pointer" onclick="${st.act}"><title>${st.label} - ${eur(st.value)}/mo · click to view</title>`;
+    html+=`<rect x="${x.toFixed(1)}" y="${padT}" width="${bw.toFixed(1)}" height="${(plotH).toFixed(1)}" fill="transparent"/>`;
+    html+=`<rect class="bar" x="${x.toFixed(1)}" y="${ry.toFixed(1)}" width="${bw.toFixed(1)}" height="${rh.toFixed(1)}" rx="6" fill="${st.color}">
+      <animate attributeName="height" values="0;${rh.toFixed(1)}" dur="0.7s" begin="${(i*0.1).toFixed(2)}s" fill="freeze" calcMode="spline" keySplines="0.16 1 0.3 1"/>
+      <animate attributeName="y" values="${(ry+rh).toFixed(1)};${ry.toFixed(1)}" dur="0.7s" begin="${(i*0.1).toFixed(2)}s" fill="freeze" calcMode="spline" keySplines="0.16 1 0.3 1"/></rect>`;
+    html+=`<text class="vlabel" x="${(x+bw/2).toFixed(1)}" y="${(ry-11).toFixed(1)}" text-anchor="middle" opacity="0">${eur(st.value)}<tspan dx="2" style="font-size:10px;fill:var(--muted)">/mo</tspan><animate attributeName="opacity" values="0;1" dur=".4s" begin="${(i*0.1+0.45).toFixed(2)}s" fill="freeze"/></text>`;
+    const isTot=st.kind==='total';const parts=st.label.split(' ');
+    if(st.label.length>13){
+      html+=`<text class="clabel ${isTot?'b':''}" x="${(x+bw/2).toFixed(1)}" y="${(H-padB+22).toFixed(1)}" text-anchor="middle">${parts.slice(0,Math.ceil(parts.length/2)).join(' ')}</text>`;
+      html+=`<text class="clabel ${isTot?'b':''}" x="${(x+bw/2).toFixed(1)}" y="${(H-padB+37).toFixed(1)}" text-anchor="middle">${parts.slice(Math.ceil(parts.length/2)).join(' ')}</text>`;
+    }else{
+      html+=`<text class="clabel ${isTot?'b':''}" x="${(x+bw/2).toFixed(1)}" y="${(H-padB+24).toFixed(1)}" text-anchor="middle">${st.label}</text>`;
+    }
+    html+=`</g>`;
+    prevRightX=x+bw; prevY=(st.kind==='total')?Y(st.value):yTop;
+  });
+  svgEl.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svgEl.innerHTML=html;
+}
+function estimateHealthySpend(){
+  // approximate healthy/committed monthly spend from SKU assigned seats × unit price, minus flagged
+  const assigned=DATA.skus.reduce((t,x)=>t+(x.unit!=null?x.seatsAssigned*x.unit:0),0);
+  const flaggedM=DATA.summary.reclaimMonthlySavings+DATA.summary.reviewMonthlySavings;
+  return Math.max(assigned-flaggedM, flaggedM*2.2);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SIGNATURE VIZ B - DEPARTMENT × TIER HEATMAP
+   ════════════════════════════════════════════════════════════════════════ */
+function tierOf(skuName){
+  if(/E5|Copilot|Plan 5|Premium/i.test(skuName))return'Premium';
+  if(/E3|Plan 3|Pro|Plan 2/i.test(skuName))return'Standard';
+  return'Frontline';
+}
+function drawHeatmap(){
+  const wrap=document.getElementById('hmwrap');if(!wrap)return;
+  const fl=flagged();
+  const tiers=['Premium','Standard','Frontline'];
+  // top departments by recoverable
+  const byDept={};fl.forEach(r=>{const d=r.department||'Unattributed';byDept[d]=(byDept[d]||0)+(r.estMonthlySavings||0);});
+  const depts=Object.entries(byDept).sort((a,b)=>b[1]-a[1]).slice(0,8).map(d=>d[0]);
+  const cell={};let mx=1;
+  depts.forEach(d=>tiers.forEach(t=>{
+    const sub=fl.filter(r=>(r.department||'Unattributed')===d && tierOf(r.skuName)===t);
+    const a=sumSav(sub);cell[d+'|'+t]={a,n:sub.length};if(a>mx)mx=a;}));
+  const colTot=tiers.map(t=>sumSav(fl.filter(r=>tierOf(r.skuName)===t)));
+  let html=`<table class="hm"><thead><tr><th class="corner">Department</th>${tiers.map(t=>`<th class="thclick" onclick="drill({tier:'${t}'})" title="All ${t}-tier recoverable">${t}</th>`).join('')}<th class="tot">Total</th></tr></thead><tbody>`;
+  depts.forEach(d=>{
+    const dq=JSON.stringify(d).replace(/"/g,'&quot;');
+    html+=`<tr><td class="rl"><span class="linklike" onclick="detail('dept',${escq(JSON.stringify(d))})" title="Open ${esc(d)} profile">${esc(d)}</span></td>`;
+    tiers.forEach(t=>{
+      const c=cell[d+'|'+t];const k=c.a/mx;
+      const dark=document.documentElement.getAttribute('data-theme')==='dark';
+      const bg=`color-mix(in srgb, var(--green) ${Math.round((dark?20:12)+k*(dark?70:72))}%, var(--panel))`;
+      const fg=k>0.45?'#fff':(dark?'var(--text)':'var(--green-deep)');
+      const act=c.a>0?`drill({dept:${dq},tier:'${t}'})`:'';
+      html+=`<td><div class="cell" style="background:${c.a>0?bg:'var(--field)'};color:${c.a>0?fg:'var(--faint)'};${c.a>0?'':'cursor:default'}" title="${esc(d)} · ${t}: ${eur(c.a)}/mo across ${c.n} seat(s)${c.a>0?' · click to view':''}" ${act?`onclick="${act}"`:''}>
+        <span class="n">${c.a>0?eur(c.a).replace('€',''):'·'}</span>${c.n?`<span class="a">${c.n} seat${c.n!==1?'s':''}</span>`:''}</div></td>`;
+    });
+    html+=`<td class="tot"><div class="cell" style="cursor:pointer" onclick="detail('dept',${escq(JSON.stringify(d))})" title="Open ${esc(d)} profile"><span class="n linklike">${eur(byDept[d])}</span></div></td>`;
+  });
+  html+=`</tbody><tfoot><tr><td class="rl" style="color:var(--dim);font-weight:700;font-size:10px;letter-spacing:.06em;text-transform:uppercase">Tier total</td>`;
+  colTot.forEach(c=>html+=`<td><div class="colsum">${eur(c)}</div></td>`);
+  html+=`<td class="tot"><div class="colsum">${eur(sumSav(fl))}</div></td></tr></tfoot></table>`;
+  wrap.innerHTML=html;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   INSIGHT TILES
+   ════════════════════════════════════════════════════════════════════════ */
+function renderInsightTiles(){
+  const el=document.getElementById('insightTiles');if(!el)return;
+  const fl=flagged();
+  // concentration
+  const bySku={};fl.forEach(r=>{if(r.estMonthlySavings)bySku[r.skuName]=(bySku[r.skuName]||0)+r.estMonthlySavings;});
+  const vals=Object.values(bySku).sort((a,b)=>b-a);const tot=vals.reduce((a,b)=>a+b,0);
+  let acc=0,n80=0;for(const v of vals){acc+=v;n80++;if(acc>=tot*0.8)break;}
+  // avg idle age (reclaim)
+  const idleDays=fl.filter(r=>r.verdict==='RECLAIM'&&r.effectiveInactiveDays!=null).map(r=>r.effectiveInactiveDays);
+  const avgIdle=idleDays.length?Math.round(idleDays.reduce((a,b)=>a+b,0)/idleDays.length):null;
+  // top vendor exposure
+  const byVendor={};(DATA.watchedApps||[]).forEach(a=>{const v=a.vendor||'?';byVendor[v]=(byVendor[v]||0)+(a.annualExposure||0);});
+  const topVendor=Object.entries(byVendor).sort((a,b)=>b[1]-a[1])[0];
+  // disabled/offboarded still licensed
+  const ghosts=fl.filter(r=>/DISABLED_ACCOUNT|OFFBOARDED/.test(r.reasonCodes)).length;
+  const tile=(icon,label,big,desc,onclick)=>`<div class="itile${onclick?' click':''}" ${onclick?`onclick="${onclick}"`:''}>
+    <div class="ih">${svg(icon)}<span class="t">${label}</span></div><div class="big">${big}</div><div class="desc">${desc}</div></div>`;
+  el.innerHTML=
+    tile('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>','Concentration',`${n80} <small>SKUs</small>`,`drive <b>80%</b> of recoverable spend &mdash; focus here first`,`drill({})`)
+   +tile('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>','Avg. age of waste',avgIdle==null?'&ndash;':`${avgIdle} <small>days</small>`,avgIdle==null?'idle data lands with agent telemetry':`reclaim seats have been idle this long on average`,`drill({verdict:'RECLAIM'})`)
+   +tile('<path d="M20 7L9 18l-5-5"/>','Cleanup wins',`${ghosts} <small>seats</small>`,`on <b>disabled or offboarded</b> accounts &mdash; safe, immediate reclaim`,`drill({verdict:'RECLAIM',search:'account'})`)
+   +tile('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>','Top app vendor',topVendor?esc(topVendor[0]):'&ndash;',topVendor?`<b>${eur(topVendor[1])}/yr</b> committed application exposure`:'app data pending',topVendor?`detail('vendor',${escq(JSON.stringify(topVendor[0]))})`:`go('apps')`);
+}
+
+/* ── quick wins ── */
+function renderQuickWins(){
+  const el=document.getElementById('quickwins');if(!el)return;
+  const rank={HIGH:3,MEDIUM:2,LOW:1};
+  const thr=confThreshold;const rk2={LOW:0,MEDIUM:1,HIGH:2};
+  const wins=flagged().filter(r=>r.estMonthlySavings&&rk2[r.confidence]>=thr)
+    .sort((a,b)=>(rank[b.confidence]-rank[a.confidence])||(b.estMonthlySavings-a.estMonthlySavings)||(b.wasteScore-a.wasteScore)).slice(0,6);
+  if(!wins.length){el.innerHTML='<div class="empty">No seats meet this confidence threshold.</div>';return;}
+  el.innerHTML=wins.map((r,i)=>`<div class="qwi" title="Open ${escq(r.displayName)} profile" onclick="detail('user',${escq(JSON.stringify(r.displayName))})">
+    <span class="rk tnum">${i+1}</span>
+    <div style="min-width:0"><div class="nm">${esc(r.displayName)}</div>
+      <div class="mt">${esc(r.skuName)} · ${esc(r.confidence)} · ${r.effectiveInactiveDays!=null?r.effectiveInactiveDays+'d idle':'no idle data'}</div></div>
+    <div class="vl">${eur(r.estMonthlySavings)}<small>${eur(r.estMonthlySavings*12)}/yr</small></div></div>`).join('');
+}
+
+/* ── department bars ── */
+function renderDeptBars(){
+  const el=document.getElementById('deptbars');if(!el)return;
+  const by={};flagged().forEach(r=>{if(r.estMonthlySavings){const d=r.department||'Unattributed';by[d]=(by[d]||0)+r.estMonthlySavings;}});
+  const rows=Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,7);const mx=Math.max(...rows.map(r=>r[1]),1);
+  el.innerHTML=rows.map(([d,v])=>{const dj=escq(JSON.stringify(d));return `<div class="hbar">
+    <span class="hbn linklike" onclick="detail('dept',${dj})" title="Open ${esc(d)} profile">${esc(d)}</span>
+    <div class="hbt" style="cursor:pointer" onclick="drill({dept:${JSON.stringify(d).replace(/"/g,'&quot;')}})" title="View ${esc(d)} seats"><div class="hbf" style="width:${Math.max(4,100*v/mx)}%"></div></div>
+    <span class="hbv linklike" onclick="drill({dept:${JSON.stringify(d).replace(/"/g,'&quot;')}})" title="View ${esc(d)} seats">${eur(v)}/mo</span></div>`;}).join('');
+}
+
+/* ── governance: direct license assignments (live data, or derived in sample mode) ── */
+function renderDirectAssignments(){
+  const host=document.getElementById('directAssign');if(!host)return;
+  let list=DATA.directAssignments;
+  if(!list){ // sample: derive from review-queue rows tagged DIRECT_ASSIGNMENT
+    list=(DATA.reviewQueue||[]).filter(r=>(r.reasonCodes||'').includes('DIRECT_ASSIGNMENT'))
+      .map(r=>({userId:r.userId,userPrincipalName:r.userPrincipalName,displayName:r.displayName,department:r.department,skuName:r.skuName,skuPartNumber:r.skuPartNumber,monthlyUnitCost:r.estMonthlySavings}));
+  }
+  if(!list.length){host.innerHTML='<div class="empty">'+svg('<path d="M20 6L9 17l-5-5"/>')+'<div>No direct assignments - every license is assigned via a group.</div></div>';return;}
+  const byDept={};list.forEach(r=>{const d=r.department||'Unattributed';byDept[d]=(byDept[d]||0)+1;});
+  const bars=Object.entries(byDept).sort((a,b)=>b[1]-a[1]).slice(0,8);const mx=Math.max(...bars.map(b=>b[1]),1);
+  const users=new Set(list.map(r=>r.userId||r.userPrincipalName)).size;
+  const rows=list.slice(0,200).map(r=>({cells:[r.displayName||r.userPrincipalName,r.department||'-',r.skuName||r.skuPartNumber,r.monthlyUnitCost!=null?eur(r.monthlyUnitCost):'-'],
+    __click:`detail('user',${escq(JSON.stringify(r.userPrincipalName||r.displayName||''))})`}));
+  host.innerHTML=`<div class="lede" style="margin-bottom:14px">${list.length} direct assignment(s) across ${users} user(s) - review for consolidation into group-based assignment.</div>
+    <div class="hbars" style="margin-bottom:16px">`+bars.map(([d,n])=>`<div class="hbar">
+      <span class="hbn linklike" onclick="detail('dept',${escq(JSON.stringify(d))})" title="Open ${esc(d)}">${esc(d)}</span>
+      <div class="hbt"><div class="hbf" style="width:${Math.max(4,100*n/mx)}%;background:linear-gradient(90deg,var(--review),#8a5a12)"></div></div>
+      <span class="hbv">${n}</span></div>`).join('')+`</div>`+
+    dataTable([{label:'User',render:r=>esc(r.cells[0])},{label:'Department',render:r=>esc(r.cells[1])},{label:'License',render:r=>esc(r.cells[2])},{label:'€/mo',num:true,render:r=>esc(r.cells[3])}],rows);
+}
+
+/* ── trend ── */
+function renderTrend(){
+  const el=document.getElementById('trend');if(!el)return;
+  const h=DATA.history.map(x=>({label:x.label,v:(x.reclaim||0)+(x.review||0)}));
+  const sub=document.getElementById('trendSub');
+  if(sub){const first=h[0].v,last=h[h.length-1].v;const chg=Math.round(100*(last-first)/first);
+    sub.innerHTML=`now <b>${eur(last)}/mo</b> · ${chg<=0?'down':'up'} ${Math.abs(chg)}% since ${h[0].label} as waste is actioned`;}
+  const W=el.clientWidth||560,H=200,pl=12,pr=14,pt=18,pb=30;
+  const pw=W-pl-pr,ph=H-pt-pb;
+  const mx=Math.max(...h.map(d=>d.v))*1.12,mn=Math.min(...h.map(d=>d.v))*0.88;
+  const X=i=>pl+(i/(h.length-1))*pw, Y=v=>pt+ph-((v-mn)/(mx-mn))*ph;
+  let grid='';for(let g=0;g<=3;g++){const yy=pt+(g/3)*ph;grid+=`<line class="gl" x1="${pl}" y1="${yy}" x2="${W-pr}" y2="${yy}"/>`;}
+  const pts=h.map((d,i)=>[X(i),Y(d.v)]);
+  const line='M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' L');
+  const area=line+` L${X(h.length-1).toFixed(1)} ${(pt+ph).toFixed(1)} L${pl} ${(pt+ph).toFixed(1)} Z`;
+  const dots=pts.map((p,i)=>`<circle class="dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4"><title>${h[i].label}: ${eur(h[i].v)}/mo</title></circle>`).join('');
+  const labels=h.map((d,i)=>`<text class="axt" x="${X(i).toFixed(1)}" y="${H-8}" text-anchor="middle">${d.label}</text>`).join('');
+  el.innerHTML=`<svg class="trend" viewBox="0 0 ${W} ${H}">
+    <defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--green)"/><stop offset="1" stop-color="var(--green)" stop-opacity="0"/></linearGradient></defs>
+    ${grid}<path class="area" d="${area}" fill="url(#tg)"/><path class="ln" d="${line}"/>${dots}${labels}</svg>`;
+}
+
+/* ── assurance (Act IV) ── */
+function renderAssurance(){
+  const el=document.getElementById('assurance');if(!el)return;
+  const items=[
+    ['Read-only by design','Prism reads Microsoft telemetry. It never assigns, removes, or changes a license &mdash; every action stays a human decision.'],
+    ['Every verdict is explainable','Each flag carries reason codes grounded in 30/60/90-day SAM/FinOps reclamation practice.'],
+    ['Conservative by default','Open (unassigned) seats are excluded from headline savings &mdash; budgeted at renewal, not double-counted.'],
+  ];
+  el.innerHTML=items.map(([t,d])=>`<div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-soft)">
+    <span style="width:26px;height:26px;border-radius:8px;background:var(--green-soft);display:grid;place-items:center;flex:none">
+      ${svg('<path d="M20 6L9 17l-5-5"/>').replace('<svg','<svg style="width:14px;height:14px;stroke:var(--green);fill:none;stroke-width:2.2"')}</span>
+    <div><div style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:2px">${t}</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.5">${d}</div></div></div>`).join('');
+}
+
+/* ── number count-up ── */
+function countUp(){document.querySelectorAll('[data-count]').forEach(el=>{const t=+el.dataset.count;animateNumber(el,t);});}
+function animateNumber(el,target){
+  const dur=900,st=performance.now(),from=parseInt(el.textContent.replace(/\D/g,''))||0;
+  function tick(now){const p=clamp((now-st)/dur,0,1);const e=1-Math.pow(1-p,3);
+    el.textContent=Math.round(from+(target-from)*e).toLocaleString('en-US');if(p<1)requestAnimationFrame(tick);}
+  requestAnimationFrame(tick);
+}
+
+/* ── sortable tables (delegated) ── */
+function installSortables(){
+  document.querySelectorAll('table.data thead th.sortable').forEach(th=>{
+    th.onclick=()=>{const k=th.dataset.k;if(qSort.key===k)qSort.dir*=-1;else{qSort.key=k;qSort.dir=-1;}renderPage();};
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SHARED - generic data table builder
+   ════════════════════════════════════════════════════════════════════════ */
+function dataTable(cols, rows, opts){
+  opts=opts||{};
+  const thead='<thead><tr>'+cols.map(c=>`<th class="${c.num?'num ':''}${c.sort?'sortable':''}" ${c.sort?`data-k="${c.sort}"`:''}>${c.label}${c.sort&&qSort.key===c.sort?`<span class="ar">${qSort.dir<0?'▾':'▴'}</span>`:''}</th>`).join('')+'</tr></thead>';
+  const body=rows.length?('<tbody>'+rows.map(r=>'<tr'+(r.__click?` style="cursor:pointer" onclick="${r.__click}"`:'')+'>'+cols.map(c=>`<td class="${c.num?'num':''}">${c.render(r)}</td>`).join('')+'</tr>').join('')+'</tbody>')
+    :`<tbody><tr><td colspan="${cols.length}"><div class="empty">${svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')}<div>${opts.empty||'No rows match the current filters.'}</div></div></td></tr></tbody>`;
+  return `<div class="tscroll"><table class="data">${thead}${body}</table></div>`;
+}
+function sortRows(rows){
+  const k=qSort.key,d=qSort.dir;
+  return [...rows].sort((a,b)=>{let x=a[k],y=b[k];
+    if(x==null)x=-Infinity;if(y==null)y=-Infinity;
+    if(typeof x==='string')return d*x.localeCompare(y);return d*(x-y);});
+}
+function utilBar(pct){const c=pct>=95?'var(--danger)':pct>=85?'var(--review)':'var(--green)';
+  return `<div class="ubar"><div class="track"><div class="fill" style="width:${pct}%;background:${c}"></div></div><span class="pct tnum">${pct}%</span></div>`;}
+function verdictChip(v){const m={RECLAIM:'reclaim',REVIEW:'review',KEEP:'keep'};return `<span class="chip ${m[v]||'neutral'}"><span class="d"></span>${v[0]+v.slice(1).toLowerCase()}</span>`;}
+function scoreMeter(v){const c=v>=80?'var(--danger)':v>=60?'var(--review)':'var(--green)';
+  return `<div class="score"><div class="track"><div class="fill" style="width:${v}%;background:${c}"></div></div><span class="v tnum" style="color:${c}">${v}</span></div>`;}
+/* Full reason-code vocabulary - kept in sync with Prism.Scoring/ScoringEngine.cs (the Reason
+   class). l = label, d = plain-English meaning, t = tone (bad = clear waste, warn = review/context,
+   '' = keep/positive/suppressor). Drives both the queue chips and the glossary. */
+const REASON={
+  DISABLED_ACCOUNT:{l:'Disabled account',d:'Account is blocked from sign-in but still holds a paid license - textbook clear waste.',t:'bad'},
+  OFFBOARDED:{l:'Offboarded',d:'The employee’s leave date has passed; the license is no longer needed.',t:'bad'},
+  CHECK_RETENTION_OR_SHARED:{l:'Check retention / shared',d:'Before removing, confirm no litigation hold and consider converting to a free shared mailbox.',t:'warn'},
+  NEW_HIRE_GRACE:{l:'New-hire grace',d:'Recently created or hired - suppressed so new starters aren’t flagged before they’re active.',t:''},
+  RECENTLY_ASSIGNED:{l:'Recently assigned',d:'License assigned within the grace window; too early to judge.',t:''},
+  SERVICE_ACCOUNT_SUSPECTED:{l:'Service account suspected',d:'Only non-interactive sign-ins seen - looks automated. Capped at review, never auto-reclaimed.',t:'warn'},
+  POSSIBLE_SHARED_OR_SERVICE:{l:'Possible shared / service',d:'Name pattern suggests a shared mailbox or service account - a classic false positive.',t:'warn'},
+  APP_IN_USE:{l:'App in use',d:'The licensed desktop app ran recently (Prism agent) - clearly still needed.',t:''},
+  APP_UNUSED:{l:'App unused',d:'The agent shows the licensed app hasn’t run while the user is otherwise inactive.',t:'bad'},
+  APP_UNUSED_90D:{l:'App unused 90d',d:'The mapped executable never ran in the 90-day window on a reliably-reporting device.',t:'bad'},
+  NEVER_ACTIVE:{l:'No activity on record',d:'No sign-in or workload activity found. Could be dormant or missing telemetry - review, not reclaim.',t:'warn'},
+  NO_ACTIVITY_30D:{l:'Inactive 30d+',d:'No activity across any signal for 30+ days (warn band).',t:'warn'},
+  NO_ACTIVITY_60D:{l:'Inactive 60d+',d:'No activity across any signal for 60+ days (review band).',t:'warn'},
+  NO_ACTIVITY_90D:{l:'Inactive 90d+',d:'No activity across any signal for 90+ days - the reclaim threshold.',t:'bad'},
+  ACTIVITY_CONCEALED:{l:'Usage concealed',d:'The tenant masks usage-report names, so confidence is lowered.',t:''},
+  HIGH_VALUE:{l:'Premium license',d:'A high-cost SKU (E5, Copilot…) - prioritised because the saving is larger.',t:'warn'},
+  GROUP_ASSIGNED:{l:'Group-assigned',d:'Assigned via group membership - Contoso’s standard model. Normal, not flagged.',t:''},
+  DIRECT_ASSIGNMENT:{l:'Directly assigned',d:'Assigned directly to the user instead of via a group - a governance deviation surfaced for review; it does not affect the waste score.',t:'warn'},
+  ASSIGNMENT_ERROR:{l:'Assignment error',d:'The license is assigned but provisioning failed (service-plan conflict or insufficient seats) - the seat is paid but not delivering. Fix or reclaim.',t:'warn'},
+  SERVICE_PLANS_DISABLED:{l:'Service plans disabled',d:'One or more service plans within the SKU are turned off - informational (often deliberate); never changes the verdict.',t:''},
+  UNASSIGNED_SEATS:{l:'Unassigned seats',d:'Seats owned but assigned to nobody - the clearest waste of all.',t:'bad'},
+  SEAT_BUFFER:{l:'Seat buffer',d:'A small number of idle seats kept as a buffer - review at renewal.',t:''},
+  FREE_SKU:{l:'Free license',d:'A free / viral / trial plan with no cost. It can never be waste, so it’s kept out of the queue.',t:''},
+  OFFBOARDING_SCHEDULED:{l:'Offboarding scheduled',d:'A leave date is set within the planning horizon - review now so the seat is recovered on the leave date.',t:'warn'},
+  NEVER_USED_SINCE_ASSIGNMENT:{l:'Never used since assignment',d:'Assigned 90+ days ago with no activity ever recorded on any signal - entitlement age itself is the evidence.',t:'bad'},
+  SHALLOW_USE:{l:'Shallow use',d:'An active premium-suite user touching at most one workload in the window - a right-size (downgrade) candidate, not a reclaim.',t:'warn'},
+  LIMITED_TELEMETRY:{l:'Limited telemetry',d:'The only evidence is the usage report (no Entra sign-in, no agent) - too weak for a high-confidence reclaim, so confidence is capped at medium.',t:''},
+  APP_NOT_INSTALLED:{l:'App not installed',d:'The licensed title is absent from every inventoried device the user has (Intune + Defender) - you can’t use what isn’t there. The strongest install-based waste signal.',t:'bad'},
+  APP_INSTALLED:{l:'App installed',d:'An inventory shows the title installed, but the agent has no usage coverage of this user’s devices - context for the reviewer.',t:''},
+  INSTALL_CORROBORATED:{l:'Install corroborated',d:'Two independent sources agree (installed AND proven unused) - higher confidence.',t:'warn'},
+  INSTALLED_NO_USAGE_TELEMETRY:{l:'Installed, no usage telemetry',d:'The title is deployed but there’s no agent usage data yet - the missing piece is telemetry, not the software.',t:''},
+  APP_IN_USE_MDE:{l:'App run (Defender)',d:'Defender Advanced Hunting saw the licensed executable start recently on the user’s devices - direct evidence of use.',t:''},
+  MDE_NO_RUN_30D:{l:'No run in 30d (Defender)',d:'Defender saw zero launches of the title in 30 days on devices it can see - corroborates unused.',t:'warn'},
+  APP_IN_USE_WEB:{l:'Web / service in use',d:'A recent Entra sign-in to the SKU’s service app (Power BI service, Project web…) - the primary usage signal for browser-first SKUs.',t:''},
+  WEB_NO_SIGNIN:{l:'No web sign-in',d:'No sign-in to the SKU’s service app on a sign-in-covered user - corroborates unused.',t:'warn'},
+  OFFICE_APPS_UNUSED:{l:'Office apps unused',d:'The M365 Apps report shows the suite user touched only mail (no Word/Excel/PowerPoint) - strengthens the downgrade case.',t:'warn'},
+  COPILOT_IN_USE:{l:'Copilot in use',d:'Recent Microsoft 365 Copilot activity in a host app - the (expensive) seat is being used.',t:''},
+  COPILOT_UNUSED:{l:'Copilot unused',d:'The Copilot usage report is present but shows no activity in the window - the clearest, highest-value reclaim (Copilot is the priciest per-seat SKU).',t:'bad'},
+  PHONE_IN_USE:{l:'Phone in use',d:'The Teams Phone seat made or took calls in the window - the number is in use.',t:''},
+  PHONE_NO_CALLS:{l:'No calls',d:'A Teams Phone (calling-plan) seat with zero calls in the window - an unused phone seat.',t:'bad'},
+};
+const REASON_LABEL=Object.fromEntries(Object.entries(REASON).map(([k,m])=>[k,m.l]));  // back-compat label map
+function reasonTags(codes){if(!codes)return'<span style="color:var(--faint)">-</span>';
+  return '<div class="reasons">'+codes.split(',').filter(Boolean).map(c=>{const m=REASON[c]||{l:c,t:''};
+    return `<span class="rtag ${m.t==='bad'?'bad':m.t==='warn'?'warn':''}" title="${escq(m.d||'')}">${esc(m.l)}</span>`;}).join('')+'</div>';}
+
+function bladeHead(root,title,lede){
+  const d=document.createElement('div');d.className='reveal';
+  d.innerHTML=`<div style="margin-bottom:22px"><h2 style="font-family:var(--f-display);font-weight:600;font-size:26px;color:var(--text);letter-spacing:-.01em;margin-bottom:6px">${title}</h2><p class="lede">${lede}</p></div>`;
+  root.appendChild(d);
+}
+function filterControls(){
+  const depts=[...new Set(DATA.reviewQueue.map(r=>r.department).filter(Boolean))].sort();
+  const regions=[...new Set(DATA.reviewQueue.map(r=>r.country).filter(Boolean))].sort();
+  return `<div class="tabletools">
+    <div class="search">${svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')}<input class="input" id="qSearch" placeholder="Search user, license, department…" value="${escq(qSearch)}"></div>
+    <div class="seg" id="qVerdict">
+      <button data-v="ALL" class="${qVerdict==='ALL'?'on':''}">All</button>
+      <button data-v="RECLAIM" class="${qVerdict==='RECLAIM'?'on':''}">Reclaim</button>
+      <button data-v="REVIEW" class="${qVerdict==='REVIEW'?'on':''}">Review</button></div>
+    <select class="input" id="qDept"><option value="ALL">All departments</option>${depts.map(d=>`<option ${qDept===d?'selected':''}>${esc(d)}</option>`).join('')}</select>
+    <select class="input" id="qRegion"><option value="ALL">All regions</option>${regions.map(r=>`<option ${qRegion===r?'selected':''}>${esc(r)}</option>`).join('')}</select>
+    <select class="input" id="qConf"><option value="ALL">Any confidence</option><option value="HIGH" ${qConf==='HIGH'?'selected':''}>High only</option><option value="MEDIUM" ${qConf==='MEDIUM'?'selected':''}>Medium+</option></select>
+    <div class="grow"></div>
+    <button class="btn" id="exportBtn">${svg('<path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/>')}Export</button>
+  </div>`;
+}
+function wireFilters(){
+  const si=document.getElementById('qSearch');
+  if(si)si.oninput=()=>{qSearch=si.value;const v=si.selectionStart;renderPage();const n=document.getElementById('qSearch');if(n){n.focus();n.setSelectionRange(v,v);}};
+  document.querySelectorAll('#qVerdict button').forEach(b=>b.onclick=()=>{qVerdict=b.dataset.v;renderPage();});
+  const dd=document.getElementById('qDept');if(dd)dd.onchange=()=>{qDept=dd.value;renderPage();};
+  const rr=document.getElementById('qRegion');if(rr)rr.onchange=()=>{qRegion=rr.value;renderPage();};
+  const cc=document.getElementById('qConf');if(cc)cc.onchange=()=>{qConf=cc.value;renderPage();};
+  const ex=document.getElementById('exportBtn');if(ex)ex.onclick=exportQueue;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Review Queue
+   ════════════════════════════════════════════════════════════════════════ */
+function queueFiltered(){
+  const rk={LOW:0,MEDIUM:1,HIGH:2};
+  return flagged().filter(r=>{
+    if(qVerdict!=='ALL'&&r.verdict!==qVerdict)return false;
+    if(qDept!=='ALL'&&r.department!==qDept)return false;
+    if(qRegion!=='ALL'&&r.country!==qRegion)return false;
+    if(qSku!=='ALL'&&r.skuName!==qSku&&r.skuPartNumber!==qSku)return false;
+    if(qTier!=='ALL'&&tierOf(r.skuName)!==qTier)return false;
+    if(qConf==='HIGH'&&r.confidence!=='HIGH')return false;
+    if(qConf==='MEDIUM'&&rk[r.confidence]<1)return false;
+    if(qConf==='LOW'&&r.confidence!=='LOW')return false;
+    if(qSearch){const q=qSearch.toLowerCase();if(!(`${r.displayName} ${r.userPrincipalName} ${r.skuName} ${r.department} ${r.country} ${r.reasonCodes}`.toLowerCase().includes(q)))return false;}
+    return true;
+  });
+}
+function activeFilterBar(){
+  const chips=[];
+  if(qVerdict!=='ALL')chips.push(['Verdict: '+qVerdict[0]+qVerdict.slice(1).toLowerCase(),"qVerdict='ALL'"]);
+  if(qConf!=='ALL')chips.push(['Confidence: '+qConf,"qConf='ALL'"]);
+  if(qDept!=='ALL')chips.push(['Dept: '+qDept,"qDept='ALL'"]);
+  if(qRegion!=='ALL')chips.push(['Region: '+qRegion,"qRegion='ALL'"]);
+  if(qSku!=='ALL')chips.push(['License: '+qSku,"qSku='ALL'"]);
+  if(qTier!=='ALL')chips.push(['Tier: '+qTier,"qTier='ALL'"]);
+  if(qSearch)chips.push(['“'+qSearch+'”',"qSearch=''"]);
+  if(!chips.length)return '';
+  return `<div class="filterbar">
+    <span class="fbk">Filtered by</span>
+    ${chips.map(([lbl,clr])=>`<span class="fchip">${esc(lbl)}<button title="Remove" onclick="${clr};renderPage()">${svg('<path d="M18 6L6 18M6 6l12 12"/>')}</button></span>`).join('')}
+    <button class="fclear" onclick="resetQueueFilters();renderPage()">Clear all</button></div>`;
+}
+function viewQueue(root){
+  bladeHead(root,'Review Queue','Every flagged license assignment, ranked by recoverable value. Click any user, license or region to drill in. Prism never changes a license itself.');
+  const rows=sortRows(queueFiltered());
+  const cols=[
+    {label:'User',sort:'displayName',render:r=>`<div class="cellmain linklike" onclick="event.stopPropagation();detail('user',${escq(JSON.stringify(r.displayName))})">${esc(r.displayName)}</div><div class="cellsub">${esc(r.userPrincipalName)}</div>`},
+    {label:'License',sort:'skuName',render:r=>`<span class="linklike" onclick="event.stopPropagation();detail('sku',${escq(JSON.stringify(r.skuName))})">${esc(r.skuName)}</span>`},
+    {label:'Region',sort:'country',render:r=>`<span class="chip neutral clickchip" onclick="event.stopPropagation();detail('country',${escq(JSON.stringify(r.country))})">${esc(r.country)}</span>`},
+    {label:'Verdict',sort:'verdict',render:r=>`<span onclick="event.stopPropagation();drill({verdict:'${r.verdict}'})" style="cursor:pointer">${verdictChip(r.verdict)}</span>`},
+    {label:'Score',sort:'wasteScore',render:r=>scoreMeter(r.wasteScore)},
+    {label:'Confidence',sort:'confidence',render:r=>`<span class="linklike" style="font-size:12px;font-weight:600" onclick="event.stopPropagation();drill({conf:'${r.confidence}'})">${esc(r.confidence)}</span>`},
+    {label:'Reasons',render:r=>reasonTags(r.reasonCodes)},
+    {label:'Idle days',sort:'effectiveInactiveDays',num:true,render:r=>r.effectiveInactiveDays!=null?r.effectiveInactiveDays:'<span style="color:var(--faint)">-</span>'},
+    {label:'Monthly',sort:'estMonthlySavings',num:true,render:r=>`<b>${eur(r.estMonthlySavings)}</b>`},
+  ];
+  rows.forEach(r=>r.__click=`detail('user',${escq(JSON.stringify(r.displayName))})`);
+  const card=document.createElement('div');card.className='card tablecard reveal';card.style.animationDelay='.05s';
+  card.innerHTML=filterControls()+activeFilterBar()+dataTable(cols,rows,{empty:'No assignments match these filters.'})+
+    `<div class="tfoot"><span>${rows.length} of ${flagged().length} flagged shown</span><span>Filtered recoverable: <b>${eur(sumSav(rows))}/mo</b></span></div>`;
+  root.appendChild(card);
+  wireFilters();
+}
+function exportQueue(){
+  const rows=sortRows(queueFiltered());
+  const head=['User','UPN','License','Region','Verdict','Score','Confidence','Reasons','IdleDays','MonthlyEUR'];
+  const q=v=>{v=(v==null?'':String(v)).replace(/\s+/g,' ').trim();if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';};
+  const lines=[head.join(',')].concat(rows.map(r=>[r.displayName,r.userPrincipalName,r.skuName,r.country,r.verdict,r.wasteScore,r.confidence,r.reasonCodes,r.effectiveInactiveDays,r.estMonthlySavings].map(q).join(',')));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv'}));
+  a.download=`prism-queue-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   APPLICATIONS
+   ════════════════════════════════════════════════════════════════════════ */
+function viewApps(root){
+  bladeHead(root,'Applications','Every application installed across the estate, paid or not &mdash; priced where a watched-app pattern matches, otherwise shown for visibility only. Annual exposure = unit price × installs.');
+  const apps=DATA.watchedApps||[];
+  const priced=apps.filter(a=>a.annualExposure>0);
+  const totalExp=priced.reduce((t,a)=>t+a.annualExposure,0);
+  const unpriced=apps.filter(a=>(a.licenseModel||'').toUpperCase()!=='FREE'&&a.annualExposure==null).length;
+
+  // vendor rollup card + table side by side
+  const top=document.createElement('div');top.className='g12 reveal';top.style.animationDelay='.05s';
+  top.innerHTML=`
+    <div class="card"><div class="ch"><h3>Application exposure by vendor</h3><div class="sub">Annual committed spend rolled up per vendor. Striped = free clients (visibility only).</div></div><div class="cb"><div class="hbars" id="vendorBars"></div></div></div>
+    <div class="card"><div class="ch"><h3>Exposure summary</h3></div><div class="cb">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div><div class="eyebrow" style="margin-bottom:6px">Total priced exposure</div><div style="font-family:var(--f-num);font-weight:600;font-size:30px;color:var(--text)" class="tnum">${eur(totalExp)}<small style="font-size:14px;color:var(--muted)">/yr</small></div></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <span class="chip hi">${apps.length} applications seen</span>
+          <span class="chip neutral">${priced.length} priced</span>
+          ${unpriced?`<span class="chip review">${unpriced} unpriced</span>`:''}
+        </div>
+        <p style="font-size:12.5px;color:var(--muted);line-height:1.6">Apps with no price are listed for visibility and never counted as waste. Add a pattern + price to <code style="font-family:var(--f-num);background:var(--field);padding:1px 6px;border-radius:5px">ref.WatchedApp</code> to bring them into totals.</p>
+      </div></div></div>`;
+  root.appendChild(top);
+
+  const cols=[
+    {label:'Application',sort:'name',render:a=>`<span class="linklike" onclick="event.stopPropagation();detail('app',${escq(JSON.stringify(a.name))})">${esc(a.name)}</span>`},
+    {label:'Vendor',sort:'vendor',render:a=>`<span class="linklike" onclick="event.stopPropagation();detail('vendor',${escq(JSON.stringify(a.vendor))})">${esc(a.vendor)}</span>`},
+    {label:'Model',render:a=>{const m=(a.licenseModel||'').toUpperCase();const cl=m==='PAID'?'reclaim':m==='FREE'?'keep':'neutral';return `<span class="chip ${cl}">${m||'?'}</span>`;}},
+    {label:'Installs',sort:'installDeviceCount',num:true,render:a=>a.installDeviceCount},
+    {label:'Unit / yr',sort:'annualUnitCost',num:true,render:a=>a.annualUnitCost==null?'<span style="color:var(--faint)">unknown</span>':eur(a.annualUnitCost)},
+    {label:'Annual exposure',sort:'annualExposure',num:true,render:a=>a.annualExposure==null?'<span style="color:var(--faint)">n/a</span>':`<b>${eur(a.annualExposure)}</b>`},
+    {label:'Confidence',render:a=>`<span style="font-size:11px;color:var(--dim);font-weight:600">${esc(a.costConfidence||'')}</span>`},
+  ];
+  const sortedApps=sortRows(apps);sortedApps.forEach(a=>a.__click=`detail('app',${escq(JSON.stringify(a.name))})`);
+  const card=document.createElement('div');card.className='card tablecard reveal';card.style.animationDelay='.1s';
+  card.innerHTML=`<div class="ch"><h3>Installed applications</h3></div>`+dataTable(cols,sortedApps);
+  root.appendChild(card);
+
+  // vendor bars
+  const byV={};apps.forEach(a=>{const v=a.vendor||'?';if(!byV[v])byV[v]={paid:0,free:false};byV[v].paid+=(a.annualExposure||0);if((a.licenseModel||'').toUpperCase()==='FREE')byV[v].free=true;});
+  const rows=Object.entries(byV).sort((a,b)=>b[1].paid-a[1].paid).slice(0,8);const mx=Math.max(...rows.map(r=>r[1].paid),1);
+  document.getElementById('vendorBars').innerHTML=rows.map(([v,d])=>`<div class="hbar">
+    <span class="hbn linklike" onclick="detail('vendor',${escq(JSON.stringify(v))})" title="Open ${esc(v)} profile">${esc(v)}</span>
+    <div class="hbt" style="cursor:pointer" onclick="detail('vendor',${escq(JSON.stringify(v))})"><div class="hbf" style="width:${d.paid>0?Math.max(4,100*d.paid/mx):100}%;${d.paid===0?'background:repeating-linear-gradient(45deg,var(--green-line),var(--green-line) 5px,var(--green-soft) 5px,var(--green-soft) 10px)':''}"></div></div>
+    <span class="hbv">${d.paid>0?eur(d.paid)+'/yr':'free'}</span></div>`).join('');
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Licenses & Pricing
+   ════════════════════════════════════════════════════════════════════════ */
+function viewLicenses(root){
+  bladeHead(root,'Licenses &amp; Pricing','Per-SKU utilisation and the cost of <b>open (unassigned)</b> seats. Idle-cost is <b>excluded from headline savings by default</b> (budgeted at renewal).');
+  if(DATA.unpriced&&DATA.unpriced.length){
+    const c=document.createElement('div');c.className='reveal';
+    c.innerHTML=`<div class="callout">${svg('<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')}
+      <div class="ct"><b>${DATA.unpriced.length} owned license${DATA.unpriced.length>1?'s':''} still unpriced</b> - savings for ${DATA.unpriced.map(u=>esc(u.skuName)).join(', ')} are excluded until you wire pricing in <code>PRICING.md</code> or set <code>ref.SkuCost</code> manually.</div></div>`;
+    root.appendChild(c);
+  }
+  const cols=[
+    {label:'License (SKU)',sort:'skuName',render:x=>`<div class="cellmain linklike" onclick="event.stopPropagation();detail('sku',${escq(JSON.stringify(x.skuName))})">${esc(x.skuName)}</div><div class="skucode">${esc(x.skuPartNumber)}</div>`},
+    {label:'Utilisation',render:x=>utilBar(Math.round(100*x.seatsAssigned/x.seatsOwned))},
+    {label:'Owned',sort:'seatsOwned',num:true,render:x=>x.seatsOwned},
+    {label:'Assigned',sort:'seatsAssigned',num:true,render:x=>x.seatsAssigned},
+    {label:'Idle',sort:'seatsIdle',num:true,render:x=>x.seatsIdle>0?`<b style="color:var(--danger)">${x.seatsIdle}</b>`:'<span style="color:var(--faint)">-</span>'},
+    {label:'Idle-seat action',render:x=>verdictChip(x.verdict)},
+    {label:'Unit / mo',sort:'unit',num:true,render:x=>x.unit==null?'<span style="color:var(--faint)">-</span>':eur(x.unit)},
+    {label:'Idle cost / mo',sort:'estMonthlySavings',num:true,render:x=>x.estMonthlySavings==null?'<span style="color:var(--faint)">n/a</span>':`<b>${eur(x.estMonthlySavings)}</b>`},
+  ];
+  const sk=sortRows(DATA.skus);sk.forEach(x=>x.__click=`detail('sku',${escq(JSON.stringify(x.skuName))})`);
+  const card=document.createElement('div');card.className='card tablecard reveal';card.style.animationDelay='.05s';
+  card.innerHTML=dataTable(cols,sk);
+  root.appendChild(card);
+
+  // reason-code glossary
+  root.appendChild(sectionHead('Reason-code glossary',`How Prism explains every verdict - all ${Object.keys(REASON).length} signals it can emit, grounded in 30/60/90 SAM/FinOps reclamation practice. Each verdict combines several; no single code reclaims on its own.`));
+  const toneCss=t=>t==='bad'?'background:var(--danger-soft);color:var(--danger)':t==='warn'?'background:var(--review-soft);color:var(--review)':'background:var(--green-soft);color:var(--green-deep)';
+  const gc=document.createElement('div');gc.className='card reveal';
+  gc.innerHTML=`<div class="cb"><div class="g2" style="gap:2px 28px">`+Object.entries(REASON).map(([k,m])=>`<div style="padding:12px 0;border-bottom:1px solid var(--line-soft)">
+    <code style="display:inline-block;font-family:var(--f-num);font-size:10px;${toneCss(m.t)};padding:3px 8px;border-radius:6px;white-space:nowrap;margin-bottom:7px">${esc(k)}</code>
+    <div style="font-size:12.5px;color:var(--muted);line-height:1.5"><b style="color:var(--text);font-weight:600">${esc(m.l)}</b> - ${esc(m.d)}</div></div>`).join('')+`</div></div>`;
+  root.appendChild(gc);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   OPTIMISE
+   ════════════════════════════════════════════════════════════════════════ */
+function viewOptimise(root){
+  bladeHead(root,'Optimise','Beyond reclaim - right-size tiers, remove redundant overlaps, plan renewals, and reallocate seats you already own before buying more.');
+  const rs=DATA.rightsize||[],ov=DATA.overlap||[],rn=DATA.renewals||[],ra=DATA.reallocation||[],lu=DATA.licenseUsage||[];
+
+  // KPI strip
+  const rsSave=rs.reduce((t,x)=>t+(x.monthlyDelta||0),0);
+  const ovSave=ov.reduce((t,x)=>t+(x.monthlyWaste||0),0);
+  const pool=ra.reduce((t,x)=>t+(x.recoverablePool||0),0);
+  const poolVal=ra.reduce((t,x)=>t+(x.poolMonthlyValue||0),0);
+  const stats=document.createElement('div');stats.className='stats reveal';stats.style.animationDelay='.05s';
+  stats.innerHTML=[
+    `<div class="stat"><div class="top"><span class="lbl">Right-size saving</span><span class="ic">${svg('<path d="M3 17l6-6 4 4 8-8"/>')}</span></div><div class="v tnum">${eur(rsSave)}<small>/mo</small></div><div class="foot">${rs.length} users · drop a tier</div></div>`,
+    `<div class="stat"><div class="top"><span class="lbl">Redundant licenses</span><span class="ic">${svg('<path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>')}</span></div><div class="v tnum">${eur(ovSave)}<small>/mo</small></div><div class="foot">${ov.length} overlapping seats</div></div>`,
+    `<div class="stat"><div class="top"><span class="lbl">Renewals tracked</span><span class="ic">${svg('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')}</span></div><div class="v tnum">${rn.length}</div><div class="foot">${rn.length?'next in '+Math.min(...rn.map(r=>r.daysToRenewal))+' days':'none upcoming'}</div></div>`,
+    `<div class="stat"><div class="top"><span class="lbl">Recoverable pool</span><span class="ic">${svg('<path d="M21 12a9 9 0 1 1-6.2-8.6"/><path d="M21 3v6h-6"/>')}</span></div><div class="v tnum">${pool}</div><div class="foot">seats to reuse · ${eur(poolVal)}/mo</div></div>`,
+  ].join('');
+  root.appendChild(stats);
+
+  // right-size
+  optSection(root,'Right-size - drop a tier, keep the user','REVIEW-band users who could move to a lower tier and save the price delta, instead of losing the license entirely.',
+    [{label:'User',render:r=>`<div class="cellmain linklike" onclick="event.stopPropagation();detail('user',${escq(JSON.stringify(r.displayName))})">${esc(r.displayName)}</div><div class="cellsub">${esc(r.userPrincipalName)}</div>`},
+     {label:'Dept',render:r=>`<span class="linklike" onclick="event.stopPropagation();detail('dept',${escq(JSON.stringify(r.department))})">${esc(r.department)}</span>`},
+     {label:'Suggested change',render:r=>`<span class="linklike" onclick="event.stopPropagation();detail('sku',${escq(JSON.stringify(r.fromName))})">${esc(r.fromName)}</span> <span style="color:var(--faint)">→</span> <span style="color:var(--green)">${esc(r.toName)}</span>`},
+     {label:'From',num:true,render:r=>eur(r.fromCost)},{label:'To',num:true,render:r=>eur(r.toCost)},
+     {label:'Saving / mo',num:true,render:r=>`<b>${eur(r.monthlyDelta)}</b>`},
+     {label:'Idle',num:true,render:r=>r.effectiveInactiveDays+'d'}],rs);
+
+  optSection(root,'Overlapping / redundant licenses','Users holding a license already covered by a suite they have - the redundant seat is recoverable with no loss of capability.',
+    [{label:'User',render:r=>`<div class="cellmain linklike" onclick="event.stopPropagation();detail('user',${escq(JSON.stringify(r.displayName))})">${esc(r.displayName)}</div><div class="cellsub">${esc(r.userPrincipalName)}</div>`},
+     {label:'Dept',render:r=>`<span class="linklike" onclick="event.stopPropagation();detail('dept',${escq(JSON.stringify(r.department))})">${esc(r.department)}</span>`},
+     {label:'Redundant license',render:r=>`<span class="linklike" onclick="event.stopPropagation();detail('sku',${escq(JSON.stringify(r.redundantName))})">${esc(r.redundantName)}</span>`},
+     {label:'Already covered by',render:r=>`<span class="linklike" style="color:var(--green)" onclick="event.stopPropagation();detail('sku',${escq(JSON.stringify(r.coveredByName))})">${esc(r.coveredByName)}</span>`},
+     {label:'Waste / mo',num:true,render:r=>`<b>${eur(r.monthlyWaste)}</b>`}],ov);
+
+  optSection(root,'Licensed but unused - measured (agent, 90d)','Holders of a per-seat desktop license with zero foreground use in 90 days - a hard reclaim backed by real usage.',
+    [{label:'User',render:r=>`<div class="cellmain linklike" onclick="event.stopPropagation();detail('user',${escq(JSON.stringify(r.displayName))})">${esc(r.displayName)}</div><div class="cellsub">${esc(r.userPrincipalName)}</div>`},
+     {label:'Dept',render:r=>`<span class="linklike" onclick="event.stopPropagation();detail('dept',${escq(JSON.stringify(r.department))})">${esc(r.department)}</span>`},
+     {label:'License',render:r=>`<span class="linklike" onclick="event.stopPropagation();detail('sku',${escq(JSON.stringify(r.skuName))})">${esc(r.skuName)}</span>`},
+     {label:'Hrs 90d',num:true,render:r=>r.fgActiveHours90},
+     {label:'Last used',num:true,render:r=>r.lastUsedDate||'<span style="color:var(--faint)">never</span>'},
+     {label:'Reclaim / mo',num:true,render:r=>`<b>${eur(r.reclaimableMonthly)}</b>`}],lu);
+
+  // renewals + reallocation side by side
+  const g=document.createElement('div');g.className='g2';
+  root.appendChild(g);
+  const rnCard=document.createElement('div');rnCard.className='card tablecard reveal';
+  rnCard.innerHTML=`<div class="ch"><h3>Renewal exposure</h3><div class="sub">Recoverable € ahead of each renewal.</div></div>`+dataTable(
+    [{label:'License',render:r=>`<div class="cellmain linklike" onclick="detail('sku',${escq(JSON.stringify(r.skuName))})">${esc(r.skuName)}</div><div class="cellsub">${r.term} · ${r.daysToRenewal}d</div>`},
+     {label:'Idle',num:true,render:r=>r.seatsIdle},{label:'Reclaim',num:true,render:r=>r.reclaimSeats},
+     {label:'Recoverable / mo',num:true,render:r=>`<b>${eur(r.recoverableMonthly)}</b>`}],rn);
+  g.appendChild(rnCard);
+  const raCard=document.createElement('div');raCard.className='card tablecard reveal';
+  raCard.innerHTML=`<div class="ch"><h3>Reallocate before you buy</h3><div class="sub">Reclaimable + idle seats to reassign instead of purchasing.</div></div>`+dataTable(
+    [{label:'License',render:r=>`<div class="cellmain linklike" onclick="detail('sku',${escq(JSON.stringify(r.skuName))})">${esc(r.skuName)}</div>`},
+     {label:'Idle',num:true,render:r=>r.idleSeats},{label:'Reclaimable',num:true,render:r=>r.reclaimableSeats},
+     {label:'Pool',num:true,render:r=>`<b>${r.recoverablePool}</b>`},{label:'Value / mo',num:true,render:r=>eur(r.poolMonthlyValue)}],ra);
+  g.appendChild(raCard);
+}
+function optSection(root,title,sub,cols,rows){
+  root.appendChild(sectionHead(title,sub));
+  const card=document.createElement('div');card.className='card tablecard reveal';
+  card.innerHTML=dataTable(cols,rows,{empty:'No candidates in the current data - appears once agent telemetry and reference tables are populated.'});
+  root.appendChild(card);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   ENTITY DETAIL VIEWS - general info + related records, all drillable
+   ════════════════════════════════════════════════════════════════════════ */
+function detailBack(root){
+  const b=document.createElement('div');b.className='reveal';
+  b.innerHTML=`<button class="btn ghost" style="margin-bottom:14px;padding-left:8px" onclick="go('${lastTab||'overview'}')">
+    ${svg('<path d="M19 12H5M11 18l-6-6 6-6"/>')}Back</button>`;
+  root.appendChild(b);
+}
+function statTiles(items){ // returns a DOM node
+  const wrap=document.createElement('div');
+  wrap.className='stats reveal';
+  wrap.style.gridTemplateColumns=`repeat(${Math.min(items.length,4)},1fr)`;
+  wrap.innerHTML=items.map(it=>
+    `<div class="stat${it.action?' click':''}" ${it.action?`onclick="${it.action}"`:''}>
+      <div class="top"><span class="lbl">${it.label}</span></div>
+      <div class="v tnum">${it.val}</div>${it.foot?`<div class="foot">${it.foot}</div>`:''}</div>`).join('');
+  return wrap;
+}
+function profileHeader(root,kicker,title,subtitle,actions){
+  const d=document.createElement('div');d.className='reveal';
+  d.innerHTML=`<div style="margin-bottom:20px">
+    <div class="eyebrow" style="margin-bottom:7px">${kicker}</div>
+    <h2 style="font-family:var(--f-display);font-weight:600;font-size:28px;color:var(--text);letter-spacing:-.01em;line-height:1.1">${esc(title)}</h2>
+    ${subtitle?`<p class="lede" style="margin-top:8px">${subtitle}</p>`:''}
+    ${actions?`<div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">${actions}</div>`:''}
+  </div>`;
+  root.appendChild(d);
+}
+function relTable(root,title,cols,rows,emptymsg){
+  root.appendChild(sectionHead(title,''));
+  const card=document.createElement('div');card.className='card tablecard reveal';
+  card.innerHTML=dataTable(cols,rows,{empty:emptymsg||'Nothing here.'});
+  root.appendChild(card);
+}
+
+// shared column sets
+function userCol(){return {label:'User',sort:'displayName',render:r=>`<div class="cellmain linklike" onclick="event.stopPropagation();detail('user',${escq(JSON.stringify(r.displayName))})">${esc(r.displayName)}</div><div class="cellsub">${esc(r.userPrincipalName)}</div>`};}
+function skuCol(){return {label:'License',sort:'skuName',render:r=>`<span class="linklike" onclick="event.stopPropagation();detail('sku',${escq(JSON.stringify(r.skuName))})">${esc(r.skuName)}</span>`};}
+function regionCol(){return {label:'Region',sort:'country',render:r=>`<span class="chip neutral clickchip" onclick="event.stopPropagation();detail('country',${escq(JSON.stringify(r.country))})">${esc(r.country)}</span>`};}
+function deptColLink(){return {label:'Department',sort:'department',render:r=>`<span class="linklike" onclick="event.stopPropagation();detail('dept',${escq(JSON.stringify(r.department))})">${esc(r.department)}</span>`};}
+function verdictCol(){return {label:'Verdict',sort:'verdict',render:r=>`<span onclick="event.stopPropagation();drill({verdict:'${r.verdict}'})" style="cursor:pointer">${verdictChip(r.verdict)}</span>`};}
+function monthlyCol(){return {label:'Monthly',sort:'estMonthlySavings',num:true,render:r=>`<b>${eur(r.estMonthlySavings)}</b>`};}
+function reasonsCol(){return {label:'Reasons',render:r=>reasonTags(r.reasonCodes)};}
+function scoreCol(){return {label:'Score',sort:'wasteScore',render:r=>scoreMeter(r.wasteScore)};}
+
+function viewDetail(root){
+  const {type,key}=DETAIL;
+  detailBack(root);
+  renderDetail(root,type,key);
+}
+
+/* ── entity-type mapping: UI vocabulary <-> server /api/drill vocabulary ── */
+const SRV_TYPE={user:'user',sku:'sku',dept:'department',country:'region',app:'app',vendor:'vendor',device:'device'};
+const UI_TYPE ={user:'user',sku:'sku',department:'dept',region:'country',app:'app',vendor:'vendor',device:'device'};
+const ENTITY_KICKER={user:'User profile',sku:'License profile',dept:'Department profile',country:'Region profile',app:'Application profile',vendor:'Vendor profile',device:'Device profile'};
+const ENTITY_NOUN ={user:'User',sku:'License',dept:'Department',country:'Region',app:'Application',vendor:'Vendor',device:'Device'};
+
+/* ── drill payload: rich server data when live, synthesized from sample data offline.
+   Both return the SAME shape {title, subtitle, sections:[{kind:'facts|table|note', …}]},
+   so a single renderer drives every drill-down in either mode. ── */
+async function drillData(type,key){
+  if(DATA && !DATA.isSample){
+    try{const r=await fetch(`api/drill?type=${encodeURIComponent(SRV_TYPE[type]||type)}&key=${encodeURIComponent(key)}`);
+      if(r.ok)return await r.json();}catch(_){}
+  }
+  return sampleDrill(type,key);
+}
+
+/* ── unified detail renderer: header + stat-tile hero + cross-referenced sections ── */
+async function renderDetail(root,type,key){
+  const host=document.createElement('div');root.appendChild(host);
+  host.innerHTML=`<div class="lede" style="padding:10px 2px">Loading ${esc(ENTITY_KICKER[type]||'detail')}…</div>`;
+  let d;try{d=await drillData(type,key);}catch(_){d=null;}
+  if(!DETAIL||DETAIL.type!==type||DETAIL.key!==key)return;            // navigated away while loading
+  host.innerHTML='';
+  if(!d||!d.sections){host.innerHTML=`<div class="empty">${svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')}<div>No detail available for this entity.</div></div>`;return;}
+  document.getElementById('bcTitle').textContent=(ENTITY_NOUN[type]||'Detail')+' · '+(d.title||key);
+  profileHeader(host,ENTITY_KICKER[type]||'Detail',d.title||key,d.subtitle?esc(d.subtitle):'');
+  const secs=(d.sections||[]).slice();
+  const heroIdx=secs.findIndex(s=>s.kind==='facts');
+  if(heroIdx>=0){host.appendChild(factsTiles(secs[heroIdx]));secs.splice(heroIdx,1);}
+  secs.forEach(s=>renderSection(host,s));
+  wireVersionFilter(host);
+  countUp();
+}
+function drillLink(linkType,linkKey){return (linkType&&linkKey)?`detail('${UI_TYPE[linkType]||linkType}',${escq(JSON.stringify(linkKey))})`:'';}
+
+/* facts → stat-tile hero (linked facts become clickable tiles) */
+function factsTiles(sec){
+  const wrap=document.createElement('div');wrap.className='stats reveal';
+  const rows=sec.rows||[];wrap.style.gridTemplateColumns=`repeat(${clamp(rows.length,1,4)},1fr)`;
+  wrap.innerHTML=rows.map(f=>{const act=drillLink(f.linkType,f.linkKey);
+    return `<div class="stat${act?' click':''}" ${act?`onclick="${act}"`:''}>
+      <div class="top"><span class="lbl">${esc(f.label)}</span></div>
+      <div class="v tnum" style="font-size:${String(f.value).length>13?'17px':'23px'};line-height:1.15">${esc(f.value)}</div></div>`;}).join('');
+  return wrap;
+}
+/* one section → card (note | facts(kv card) | table with cross-links) */
+function renderSection(root,s){
+  if(s.kind==='note'){const c=document.createElement('div');c.className='card reveal';
+    c.innerHTML=`<div class="ch"><h3>${esc(s.heading)}</h3></div><div class="cb"><p class="lede">${esc(s.text)}</p></div>`;root.appendChild(c);return;}
+  if(s.kind==='facts'){const c=document.createElement('div');c.className='card reveal';
+    c.innerHTML=`<div class="ch"><h3>${esc(s.heading)}</h3></div><div class="cb"><div class="g2">`+
+      (s.rows||[]).map(f=>{const act=drillLink(f.linkType,f.linkKey);
+        return `<div style="display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid var(--line-soft)">
+          <span style="color:var(--muted);font-size:13px">${esc(f.label)}</span>
+          <span class="${f.linkType?'linklike':''}" ${act?`onclick="${act}" style="cursor:pointer"`:''} style="font-weight:600;font-size:13px;text-align:right">${esc(f.value)}</span></div>`;}).join('')+
+      `</div></div>`;root.appendChild(c);return;}
+  // table
+  const numCol=lbl=>/€|\/mo|\/yr|hrs|days|idle|seats|installs|devices|\bcount\b|score|monthly|annual|holders|flagged/i.test(lbl);
+  const cols=(s.cols||[]).map((c,i)=>({label:c,num:i>0&&numCol(c),render:r=>esc(r.cells?r.cells[i]:'')}));
+  const rows=(s.rows||[]).map(r=>{const o={cells:r.cells};const act=drillLink(r.linkType,r.linkKey);if(act)o.__click=act;return o;});
+  root.appendChild(sectionHead(s.heading,''));
+  const card=document.createElement('div');card.className='card tablecard reveal';card.dataset.section=s.heading;
+  card.innerHTML=dataTable(cols,rows,{empty:'No related records.'});
+  root.appendChild(card);
+}
+/* APP drill: click a row in "Versions" to filter "Installed on devices" to that version */
+function wireVersionFilter(host){
+  const cards=[...host.querySelectorAll('.card.tablecard')];
+  const vCard=cards.find(c=>/^versions/i.test(c.dataset.section||''));
+  const iCard=cards.find(c=>/^installed on devices/i.test(c.dataset.section||''));
+  if(!vCard||!iCard)return;
+  const iTable=iCard.querySelector('table');if(!iTable||!iTable.tHead)return;
+  const cidx=[...iTable.tHead.rows[0].cells].map(c=>c.textContent.trim().toLowerCase()).indexOf('version');
+  if(cidx<0)return;let active=null;
+  vCard.querySelectorAll('tbody tr').forEach(tr=>{
+    if(!tr.cells.length||tr.querySelector('[colspan]'))return;
+    tr.style.cursor='pointer';tr.title='Show only devices on this version (click again to clear)';
+    tr.addEventListener('click',ev=>{ev.stopPropagation();
+      const v=(tr.cells[0]?.textContent||'').trim();active=(active===v)?null:v;
+      vCard.querySelectorAll('tbody tr').forEach(r=>r.style.background=(active&&(r.cells[0]?.textContent||'').trim()===active)?'var(--green-soft)':'');
+      if(iTable.tBodies[0])[...iTable.tBodies[0].rows].forEach(r=>{if(r.querySelector('[colspan]'))return;
+        r.style.display=(!active||(r.cells[cidx]?.textContent||'').trim()===active)?'':'none';});});
+  });
+}
+
+/* ── sample-mode drill: synthesize the same {title,subtitle,sections} from sample data ── */
+function sampleDrill(type,key){
+  const RQ=DATA.reviewQueue||[],SK=DATA.skus||[],AP=DATA.watchedApps||[],DV=DATA.devices||[],IN=DATA.installs||[];
+  const F=(label,value,lt,lk)=>({label,value:(value==null||value==='')?'-':String(value),linkType:lt,linkKey:lk});
+  const FACTS=(heading,rows)=>({kind:'facts',heading,rows});
+  const T=(heading,cols,rows)=>({kind:'table',heading,cols,rows});
+  const R=(cells,lt,lk)=>({cells:cells.map(c=>c==null?'-':String(c)),linkType:lt,linkKey:lk});
+  const E=n=>eur(n);
+  if(type==='user'){
+    const ur=RQ.filter(r=>r.displayName===key||r.userPrincipalName===key||r.userId===key);
+    const u=ur[0];if(!u)return{title:key,subtitle:'',sections:[{kind:'note',heading:'User',text:'No sample records for this user.'}]};
+    const udev=DV.filter(d=>d.userId===u.userId);
+    const sw={};IN.filter(i=>udev.some(d=>d.deviceName===i.deviceName)).forEach(i=>{const o=sw[i.app]||(sw[i.app]={hrs:0,st:i.usageState,last:i.lastUsedDate});o.hrs+=i.fgActiveHours90;});
+    return{title:u.displayName,subtitle:u.userPrincipalName,sections:[
+      FACTS('Profile',[F('Email',u.userPrincipalName),F('Department',u.department,'department',u.department),F('Country',u.country,'region',u.country),F('Flagged licenses',ur.filter(r=>r.verdict!=='KEEP').length),F('Recoverable / mo',E(sumSav(ur.filter(r=>r.verdict!=='KEEP'))))]),
+      T(`Licenses (${ur.length})`,['License','Status','Idle days','€/mo'],ur.map(r=>R([r.skuName,r.verdict,r.effectiveInactiveDays??'-',r.estMonthlySavings==null?'-':E(r.estMonthlySavings)],'sku',r.skuPartNumber))),
+      T(`Devices (${udev.length})`,['Device','OS','Compliance','Last sync'],udev.map(d=>R([d.deviceName,d.operatingSystem,d.complianceState,d.lastSync],'device',d.deviceName))),
+      T(`Software used (${Object.keys(sw).length})`,['Application','Hrs 90d','State','Last used'],Object.entries(sw).sort((a,b)=>b[1].hrs-a[1].hrs).map(([a,o])=>R([a,o.hrs,o.st,o.last||'-'],'app',a))),
+    ]};
+  }
+  if(type==='device'){
+    const d=DV.find(x=>x.deviceName===key||x.deviceId===key);
+    if(!d)return{title:key,subtitle:'Device',sections:[{kind:'note',heading:'Device',text:'No sample record for this device. Against the live database, device profiles show the primary user, department, country and the agent-measured application usage on the device.'}]};
+    const sw=IN.filter(i=>i.deviceName===d.deviceName).sort((a,b)=>b.fgActiveHours90-a.fgActiveHours90);
+    return{title:d.deviceName,subtitle:d.operatingSystem,sections:[
+      FACTS('Device',[F('Primary user',d.displayName||d.userPrincipalName,'user',d.userPrincipalName),F('Department',d.department,'department',d.department),F('Country',d.country,'region',d.country),F('OS',d.operatingSystem+' '+d.osVersion),F('Compliance',d.complianceState),F('Hardware',d.manufacturer+' '+d.model),F('Last sync',d.lastSync)]),
+      T(`Software on this device - agent-measured usage (${sw.length})`,['Application','Version','Hrs 90d','Active days','State','Last used'],sw.map(i=>R([i.app,i.version,i.fgActiveHours90,i.activeDays90,i.usageState,i.lastUsedDate||'-'],'app',i.app))),
+    ]};
+  }
+  if(type==='sku'){
+    const util=SK.find(x=>x.skuName===key||x.skuPartNumber===key);
+    const nm=util?util.skuName:key;const seats=RQ.filter(r=>r.skuName===nm||r.skuPartNumber===key);
+    const part=util?util.skuPartNumber:(seats[0]?seats[0].skuPartNumber:key);
+    const byD={},byC={};seats.forEach(r=>{const d=byD[r.department]||(byD[r.department]={n:0,v:0});d.n++;d.v+=(r.estMonthlySavings||0);const c=byC[r.country]||(byC[r.country]={n:0,v:0});c.n++;c.v+=(r.estMonthlySavings||0);});
+    const secs=[];
+    if(util){const pct=util.seatsOwned?Math.round(100*util.seatsAssigned/util.seatsOwned):0;
+      secs.push(FACTS('Utilisation',[F('Seats owned',util.seatsOwned),F('Assigned',util.seatsAssigned),F('Idle (open)',util.seatsIdle),F('Utilisation',pct+'%')]));
+      secs.push(FACTS('Cost & savings',[F('Unit / mo',util.unit==null?'unpriced':E(util.unit)),F('Idle cost / mo',util.estMonthlySavings==null?'n/a':E(util.estMonthlySavings)),F('Annual if idle reclaimed',util.estMonthlySavings==null?'n/a':E(util.estMonthlySavings*12)),F('Flagged recoverable / mo',E(sumSav(seats)))]));}
+    secs.push(T(`Assigned users (${seats.length})`,['User','Department','Status','Idle days','€/mo'],seats.map(r=>R([r.displayName,r.department,r.verdict,r.effectiveInactiveDays??'-',r.estMonthlySavings==null?'-':E(r.estMonthlySavings)],'user',r.userPrincipalName))));
+    secs.push(T(`Departments (${Object.keys(byD).length})`,['Department','Holders','Flagged €/mo'],Object.entries(byD).sort((a,b)=>b[1].v-a[1].v).map(([d,o])=>R([d,o.n,E(o.v)],'department',d))));
+    secs.push(T(`Countries (${Object.keys(byC).length})`,['Country','Holders','Flagged €/mo'],Object.entries(byC).sort((a,b)=>b[1].v-a[1].v).map(([c,o])=>R([c,o.n,E(o.v)],'region',c))));
+    return{title:nm,subtitle:part,sections:secs};
+  }
+  if(type==='dept'){
+    const seats=RQ.filter(r=>(r.department||'Unattributed')===key);
+    const ppl=[...new Map(seats.map(r=>[r.userId,r])).values()];
+    const dev=DV.filter(d=>(d.department||'Unattributed')===key);
+    const sw={};IN.filter(i=>(i.department||'Unattributed')===key).forEach(i=>{const o=sw[i.app]||(sw[i.app]={n:0,hrs:0});o.n++;o.hrs+=i.fgActiveHours90;});
+    const byS={},byC={};seats.forEach(r=>{const s=byS[r.skuPartNumber]||(byS[r.skuPartNumber]={name:r.skuName,n:0,v:0});s.n++;s.v+=(r.estMonthlySavings||0);byC[r.country]=(byC[r.country]||0)+1;});
+    return{title:key,subtitle:'Department',sections:[
+      FACTS('Summary',[F('People',ppl.length),F('Flagged seats',seats.length),F('Recoverable / mo',E(sumSav(seats))),F('Devices',dev.length)]),
+      T(`People (${ppl.length})`,['User','Country','Email'],ppl.map(r=>R([r.displayName,r.country,r.userPrincipalName],'user',r.userPrincipalName))),
+      T(`Licenses (${Object.keys(byS).length})`,['License','Holders','Flagged €/mo'],Object.entries(byS).sort((a,b)=>b[1].v-a[1].v).map(([p,o])=>R([o.name,o.n,E(o.v)],'sku',p))),
+      T(`Devices (${dev.length})`,['Device','OS','Compliance','User'],dev.map(d=>R([d.deviceName,d.operatingSystem,d.complianceState,d.displayName],'device',d.deviceName))),
+      T(`Top software (${Object.keys(sw).length})`,['Application','Installs','Hrs 90d'],Object.entries(sw).sort((a,b)=>b[1].hrs-a[1].hrs).slice(0,15).map(([a,o])=>R([a,o.n,o.hrs],'app',a))),
+      T(`Countries (${Object.keys(byC).length})`,['Country','Flagged seats'],Object.entries(byC).sort((a,b)=>b[1]-a[1]).map(([c,n])=>R([c,n],'region',c))),
+    ]};
+  }
+  if(type==='country'){
+    const REG={NL:'Netherlands',DE:'Germany',DK:'Denmark'};
+    const seats=RQ.filter(r=>r.country===key);
+    const ppl=[...new Map(seats.map(r=>[r.userId,r])).values()];
+    const dev=DV.filter(d=>d.country===key);
+    const byD={},byS={},sw={};seats.forEach(r=>{byD[r.department]=(byD[r.department]||0)+(r.estMonthlySavings||0);const s=byS[r.skuPartNumber]||(byS[r.skuPartNumber]={name:r.skuName,n:0,v:0});s.n++;s.v+=(r.estMonthlySavings||0);});
+    IN.filter(i=>i.country===key).forEach(i=>sw[i.app]=(sw[i.app]||0)+1);
+    return{title:(REG[key]||key)+` (${key})`,subtitle:'Region / usage location',sections:[
+      FACTS('Summary',[F('Licensed users',ppl.length),F('Flagged seats',seats.length),F('Recoverable / mo',E(sumSav(seats))),F('Departments',Object.keys(byD).length)]),
+      T(`Departments (${Object.keys(byD).length})`,['Department','Flagged €/mo'],Object.entries(byD).sort((a,b)=>b[1]-a[1]).map(([d,v])=>R([d,E(v)],'department',d))),
+      T(`Licenses (${Object.keys(byS).length})`,['License','Holders','Flagged €/mo'],Object.entries(byS).sort((a,b)=>b[1].v-a[1].v).map(([p,o])=>R([o.name,o.n,E(o.v)],'sku',p))),
+      T(`People (${ppl.length})`,['User','Department','Email'],ppl.map(r=>R([r.displayName,r.department,r.userPrincipalName],'user',r.userPrincipalName))),
+      T(`Devices (${dev.length})`,['Device','OS','User'],dev.map(d=>R([d.deviceName,d.operatingSystem,d.displayName],'device',d.deviceName))),
+      T(`Software (${Object.keys(sw).length})`,['Application','Installs'],Object.entries(sw).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([a,n])=>R([a,n],'app',a))),
+    ]};
+  }
+  if(type==='app'){
+    const a=AP.find(x=>x.name===key);const inst=IN.filter(i=>i.app===key);
+    const vers={};inst.forEach(i=>vers[i.version]=(vers[i.version]||0)+1);
+    const usrs=[...new Map(inst.map(i=>[i.userPrincipalName,i])).values()];
+    const secs=[];
+    if(a)secs.push(FACTS('Application',[F('Vendor',a.vendor,'vendor',a.vendor),F('License model',a.licenseModel),F('Installs (devices)',a.installDeviceCount),F('Unit / yr',a.annualUnitCost==null?'unknown':E(a.annualUnitCost)),F('Annual exposure',a.annualExposure==null?'n/a':E(a.annualExposure)),F('Price confidence',a.costConfidence)]));
+    secs.push(T(`Versions (${Object.keys(vers).length})`,['Version','Devices'],Object.entries(vers).sort((a,b)=>b[1]-a[1]).map(([v,n])=>R([v,n]))));
+    secs.push(T(`Installed on devices (${inst.length}) - click a version above to filter; usage from the Prism agent`,['Device','Version','User','Hrs 90d','State','Last used'],inst.slice().sort((x,y)=>y.fgActiveHours90-x.fgActiveHours90).map(i=>R([i.deviceName,i.version,i.displayName,i.fgActiveHours90,i.usageState,i.lastUsedDate||'-'],'device',i.deviceName))));
+    secs.push(T(`Installed for users (${usrs.length})`,['User','Department'],usrs.map(i=>R([i.displayName,i.department],'user',i.userPrincipalName))));
+    return{title:key,subtitle:a?a.vendor:'',sections:secs};
+  }
+  if(type==='vendor'){
+    const apps=AP.filter(x=>x.vendor===key);
+    return{title:key,subtitle:'Applications by this vendor',sections:[
+      T(`Applications (${apps.length})`,['Application','Installs','Annual exposure'],apps.slice().sort((a,b)=>(b.annualExposure||0)-(a.annualExposure||0)).map(a=>R([a.name,a.installDeviceCount,a.annualExposure==null?'n/a':E(a.annualExposure)],'app',a.name))),
+    ]};
+  }
+  return{title:key,subtitle:'',sections:[{kind:'note',heading:'Detail',text:'No detail handler for this entity type.'}]};
+}
+
+/* ── DEPARTMENT profile: general info + its flagged seats ── */
+function detailDept(root,dept){
+  const seats=flagged().filter(r=>(r.department||'Unattributed')===dept);
+  const all=DATA.reviewQueue.filter(r=>(r.department||'Unattributed')===dept);
+  const total=sumSav(seats);
+  const reclaim=seats.filter(r=>r.verdict==='RECLAIM'),review=seats.filter(r=>r.verdict==='REVIEW');
+  const bySku={};seats.forEach(r=>{bySku[r.skuName]=(bySku[r.skuName]||0)+(r.estMonthlySavings||0);});
+  const topSku=Object.entries(bySku).sort((a,b)=>b[1]-a[1])[0];
+  const byRegion={};seats.forEach(r=>{byRegion[r.country]=(byRegion[r.country]||0)+1;});
+  profileHeader(root,'Department profile',dept,
+    `Showback view for <b>${esc(dept)}</b>. ${all.length} assignments scored, <b>${seats.length} flagged</b> for action.`,
+    `<button class="btn primary" onclick="drill({dept:${JSON.stringify(dept).replace(/"/g,'&quot;')}})">${svg('<path d="M5 12h14M13 6l6 6-6 6"/>')}View all ${seats.length} flagged seats</button>`);
+  root.appendChild(statTiles([
+    {label:'Recoverable / mo',val:eur(total),foot:`${eur(total*12)}/yr`,action:`drill({dept:${JSON.stringify(dept).replace(/"/g,'&quot;')}})`},
+    {label:'Reclaim seats',val:String(reclaim.length),foot:`${eur(sumSav(reclaim))}/mo`,action:`drill({dept:${JSON.stringify(dept).replace(/"/g,'&quot;')},verdict:'RECLAIM'})`},
+    {label:'Review seats',val:String(review.length),foot:`${eur(sumSav(review))}/mo`,action:`drill({dept:${JSON.stringify(dept).replace(/"/g,'&quot;')},verdict:'REVIEW'})`},
+    {label:'Top license',val:topSku?`<span style="font-size:18px">${esc(topSku[0].replace('Microsoft ','MS '))}</span>`:'-',foot:topSku?`${eur(topSku[1])}/mo`:'',action:topSku?`detail('sku',${escq(JSON.stringify(topSku[0]))})`:''},
+  ]));
+  // licenses breakdown in this dept
+  const skuRows=Object.entries(bySku).sort((a,b)=>b[1]-a[1]).map(([n,v])=>{
+    const cnt=seats.filter(r=>r.skuName===n).length;return {skuName:n,_cnt:cnt,estMonthlySavings:v,__click:`detail('sku',${escq(JSON.stringify(n))})`};});
+  relTable(root,'Licenses flagged in this department',[
+    skuCol(),
+    {label:'Flagged seats',num:true,render:r=>r._cnt},
+    {label:'Recoverable / mo',num:true,render:r=>`<b>${eur(r.estMonthlySavings)}</b>`},
+  ],skuRows,'No flagged licenses.');
+  // the seats themselves
+  seats.forEach(r=>r.__click=`detail('user',${escq(JSON.stringify(r.displayName))})`);
+  relTable(root,`Flagged seats in ${dept}`,[
+    userCol(),skuCol(),regionCol(),verdictCol(),scoreCol(),reasonsCol(),monthlyCol(),
+  ],sortRows(seats),'No flagged seats in this department.');
+}
+
+/* ── USER profile ── */
+function detailUser(root,name){
+  const rows=DATA.reviewQueue.filter(r=>r.displayName===name);
+  if(!rows.length){profileHeader(root,'User profile',name,'No records for this user.');return;}
+  const r0=rows[0];
+  const flaggedRows=rows.filter(r=>r.verdict!=='KEEP');
+  const total=sumSav(flaggedRows);
+  profileHeader(root,'User profile',name,
+    `<code>${esc(r0.userPrincipalName)}</code> &middot; <span class="linklike" onclick="detail('dept',${escq(JSON.stringify(r0.department))})">${esc(r0.department)}</span> &middot; <span class="linklike" onclick="detail('country',${escq(JSON.stringify(r0.country))})">${esc(r0.country)}</span>`,
+    `<button class="btn" onclick="detail('dept',${escq(JSON.stringify(r0.department))})">${svg('<path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3"/>')}${esc(r0.department)} department</button>`);
+  root.appendChild(statTiles([
+    {label:'Flagged licenses',val:String(flaggedRows.length)},
+    {label:'Recoverable / mo',val:eur(total),foot:`${eur(total*12)}/yr`},
+    {label:'Top verdict',val:flaggedRows.some(r=>r.verdict==='RECLAIM')?'Reclaim':'Review'},
+    {label:'Worst idle',val:(()=>{const d=rows.map(r=>r.effectiveInactiveDays).filter(x=>x!=null);return d.length?Math.max(...d)+'d':'-';})()},
+  ]));
+  rows.forEach(r=>r.__click=`detail('sku',${escq(JSON.stringify(r.skuName))})`);
+  relTable(root,'Assigned licenses under review',[
+    skuCol(),verdictCol(),scoreCol(),
+    {label:'Confidence',render:r=>`<span class="linklike" style="font-size:12px;font-weight:600" onclick="event.stopPropagation();drill({conf:'${r.confidence}'})">${esc(r.confidence)}</span>`},
+    reasonsCol(),
+    {label:'Idle days',sort:'effectiveInactiveDays',num:true,render:r=>r.effectiveInactiveDays!=null?r.effectiveInactiveDays:'-'},
+    monthlyCol(),
+  ],rows,'No licenses under review for this user.');
+}
+
+/* ── SKU / license profile ── */
+function detailSku(root,skuName){
+  const util=DATA.skus.find(x=>x.skuName===skuName||x.skuPartNumber===skuName);
+  const seats=flagged().filter(r=>r.skuName===skuName);
+  const total=sumSav(seats);
+  const tier=tierOf(skuName);
+  profileHeader(root,'License profile',skuName,
+    util?`<code>${esc(util.skuPartNumber)}</code> &middot; ${tier} tier &middot; ${util.unit!=null?eur(util.unit)+'/seat/mo':'unpriced'}`:`${tier} tier`,
+    `<button class="btn primary" onclick="drill({sku:${escq(JSON.stringify(skuName))}})">${svg('<path d="M5 12h14M13 6l6 6-6 6"/>')}View ${seats.length} flagged seats</button>
+     <button class="btn" onclick="drill({tier:'${tier}'})">All ${tier}-tier seats</button>`);
+  if(util){
+    const pct=Math.round(100*util.seatsAssigned/util.seatsOwned);
+    root.appendChild(statTiles([
+      {label:'Seats owned',val:String(util.seatsOwned)},
+      {label:'Assigned',val:String(util.seatsAssigned),foot:pct+'% utilised'},
+      {label:'Idle seats',val:String(util.seatsIdle),foot:util.estMonthlySavings!=null?eur(util.estMonthlySavings)+'/mo':'unpriced',action:"go('licenses')"},
+      {label:'Flagged recoverable',val:eur(total),foot:`${seats.length} seats · ${eur(total*12)}/yr`,action:`drill({sku:${escq(JSON.stringify(skuName))}})`},
+    ]));
+  }else{
+    root.appendChild(statTiles([
+      {label:'Flagged seats',val:String(seats.length)},
+      {label:'Recoverable / mo',val:eur(total),foot:`${eur(total*12)}/yr`,action:`drill({sku:${escq(JSON.stringify(skuName))}})`},
+      {label:'Tier',val:tier},
+    ]));
+  }
+  // departments using this license
+  const byDept={};seats.forEach(r=>{byDept[r.department]=(byDept[r.department]||0)+(r.estMonthlySavings||0);});
+  const deptRows=Object.entries(byDept).sort((a,b)=>b[1]-a[1]).map(([d,v])=>({department:d,_cnt:seats.filter(r=>r.department===d).length,estMonthlySavings:v,__click:`detail('dept',${escq(JSON.stringify(d))})`}));
+  relTable(root,'Departments holding this license (flagged)',[
+    deptColLink(),
+    {label:'Flagged seats',num:true,render:r=>r._cnt},
+    {label:'Recoverable / mo',num:true,render:r=>`<b>${eur(r.estMonthlySavings)}</b>`},
+  ],deptRows,'No flagged seats for this license.');
+  // seats
+  seats.forEach(r=>r.__click=`detail('user',${escq(JSON.stringify(r.displayName))})`);
+  relTable(root,'Flagged seats on this license',[
+    userCol(),deptColLink(),regionCol(),verdictCol(),scoreCol(),reasonsCol(),monthlyCol(),
+  ],sortRows(seats),'No flagged seats.');
+}
+
+/* ── APP profile ── */
+function detailApp(root,appName){
+  const a=(DATA.watchedApps||[]).find(x=>x.name===appName);
+  if(!a){profileHeader(root,'Application',appName,'No data for this application.');return;}
+  profileHeader(root,'Application profile',a.name,
+    `Vendor: <span class="linklike" onclick="detail('vendor',${escq(JSON.stringify(a.vendor))})">${esc(a.vendor)}</span> &middot; ${esc(a.licenseModel||'?')} &middot; cost confidence ${esc(a.costConfidence||'-')}`,
+    `<button class="btn" onclick="detail('vendor',${escq(JSON.stringify(a.vendor))})">${svg('<path d="M3 7h18M3 12h18M3 17h18"/>')}All ${esc(a.vendor)} apps</button>`);
+  root.appendChild(statTiles([
+    {label:'Installs',val:String(a.installDeviceCount)},
+    {label:'Unit / yr',val:a.annualUnitCost==null?'unknown':eur(a.annualUnitCost)},
+    {label:'Annual exposure',val:a.annualExposure==null?'n/a':eur(a.annualExposure),foot:a.licenseModel==='FREE'?'free - visibility only':''},
+    {label:'License model',val:esc(a.licenseModel||'?')},
+  ]));
+  const sib=(DATA.watchedApps||[]).filter(x=>x.vendor===a.vendor&&x.name!==a.name);
+  if(sib.length){
+    sib.forEach(x=>x.__click=`detail('app',${escq(JSON.stringify(x.name))})`);
+    relTable(root,`Other ${a.vendor} applications`,[
+      {label:'Application',render:x=>`<span class="linklike">${esc(x.name)}</span>`},
+      {label:'Installs',num:true,render:x=>x.installDeviceCount},
+      {label:'Annual exposure',num:true,render:x=>x.annualExposure==null?'n/a':`<b>${eur(x.annualExposure)}</b>`},
+    ],sib);
+  }
+}
+
+/* ── VENDOR profile ── */
+function detailVendor(root,vendor){
+  const apps=(DATA.watchedApps||[]).filter(a=>a.vendor===vendor);
+  const exp=apps.reduce((t,a)=>t+(a.annualExposure||0),0);
+  const installs=apps.reduce((t,a)=>t+(a.installDeviceCount||0),0);
+  profileHeader(root,'Vendor profile',vendor,
+    `${apps.length} application${apps.length!==1?'s':''} installed across the estate.`,
+    `<button class="btn" onclick="go('apps')">${svg('<path d="M19 12H5M11 18l-6-6 6-6"/>')}All applications</button>`);
+  root.appendChild(statTiles([
+    {label:'Applications',val:String(apps.length)},
+    {label:'Total exposure / yr',val:eur(exp)},
+    {label:'Total installs',val:String(installs)},
+    {label:'Priced apps',val:String(apps.filter(a=>a.annualExposure>0).length)},
+  ]));
+  apps.forEach(a=>a.__click=`detail('app',${escq(JSON.stringify(a.name))})`);
+  relTable(root,`${vendor} applications`,[
+    {label:'Application',render:a=>`<span class="linklike">${esc(a.name)}</span>`},
+    {label:'Model',render:a=>{const m=(a.licenseModel||'').toUpperCase();return `<span class="chip ${m==='PAID'?'reclaim':m==='FREE'?'keep':'neutral'}">${m||'?'}</span>`;}},
+    {label:'Installs',sort:'installDeviceCount',num:true,render:a=>a.installDeviceCount},
+    {label:'Unit / yr',num:true,render:a=>a.annualUnitCost==null?'unknown':eur(a.annualUnitCost)},
+    {label:'Annual exposure',sort:'annualExposure',num:true,render:a=>a.annualExposure==null?'n/a':`<b>${eur(a.annualExposure)}</b>`},
+  ],apps);
+}
+
+/* ── COUNTRY / region profile ── */
+function detailCountry(root,country){
+  const seats=flagged().filter(r=>r.country===country);
+  const all=DATA.reviewQueue.filter(r=>r.country===country);
+  const total=sumSav(seats);
+  const REG={NL:'Netherlands',DE:'Germany',DK:'Denmark'};
+  const byDept={};seats.forEach(r=>{byDept[r.department]=(byDept[r.department]||0)+(r.estMonthlySavings||0);});
+  profileHeader(root,'Region profile',(REG[country]||country)+' ('+country+')',
+    `${all.length} assignments scored in this region, <b>${seats.length} flagged</b>.`,
+    `<button class="btn primary" onclick="drill({region:'${esc(country)}'})">${svg('<path d="M5 12h14M13 6l6 6-6 6"/>')}View ${seats.length} flagged seats</button>`);
+  root.appendChild(statTiles([
+    {label:'Recoverable / mo',val:eur(total),foot:`${eur(total*12)}/yr`,action:`drill({region:'${esc(country)}'})`},
+    {label:'Flagged seats',val:String(seats.length)},
+    {label:'Departments',val:String(Object.keys(byDept).length)},
+    {label:'Reclaim seats',val:String(seats.filter(r=>r.verdict==='RECLAIM').length),action:`drill({region:'${esc(country)}',verdict:'RECLAIM'})`},
+  ]));
+  const deptRows=Object.entries(byDept).sort((a,b)=>b[1]-a[1]).map(([d,v])=>({department:d,_cnt:seats.filter(r=>r.department===d).length,estMonthlySavings:v,__click:`detail('dept',${escq(JSON.stringify(d))})`}));
+  relTable(root,'Departments in this region (flagged)',[
+    deptColLink(),
+    {label:'Flagged seats',num:true,render:r=>r._cnt},
+    {label:'Recoverable / mo',num:true,render:r=>`<b>${eur(r.estMonthlySavings)}</b>`},
+  ],deptRows,'No flagged seats in this region.');
+  seats.forEach(r=>r.__click=`detail('user',${escq(JSON.stringify(r.displayName))})`);
+  relTable(root,`Flagged seats in ${REG[country]||country}`,[
+    userCol(),skuCol(),deptColLink(),verdictCol(),scoreCol(),monthlyCol(),
+  ],sortRows(seats),'No flagged seats.');
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   BOOT
+   ════════════════════════════════════════════════════════════════════════ */
+function boot(){renderNav();renderPage();}
+document.getElementById('themeBtn').onclick=()=>{
+  const d=document.documentElement;d.setAttribute('data-theme',d.getAttribute('data-theme')==='dark'?'light':'dark');
+  renderPage();
+};
+document.getElementById('printBtn').onclick=()=>window.print();
+document.getElementById('searchBtn').onclick=openCmdk;
+
+/* ════════════════════════════════════════════════════════════════════════
+   COMMAND PALETTE (⌘K / Ctrl-K) - find and drill into ANY entity
+   ════════════════════════════════════════════════════════════════════════ */
+let cmdkItems=[],cmdkActive=0,_srchSeq=0,_srchTimer=null,_remote=[];
+function cmdkBase(){
+  const it=[
+    {k:'View',label:'Overview',meta:'',run:()=>go('overview')},
+    {k:'View',label:'Review Queue',meta:'',run:()=>go('queue')},
+    {k:'View',label:'Applications',meta:'',run:()=>go('apps')},
+    {k:'View',label:'Licenses & Pricing',meta:'',run:()=>go('licenses')},
+    {k:'View',label:'Optimise',meta:'',run:()=>go('optimise')},
+  ];
+  (DATA.skus||[]).forEach(s=>it.push({k:'License',label:s.skuName,meta:s.skuPartNumber,run:()=>detail('sku',s.skuPartNumber)}));
+  (DATA.watchedApps||[]).forEach(a=>it.push({k:'App',label:a.name,meta:a.vendor||'',run:()=>detail('app',a.name)}));
+  [...new Set((DATA.reviewQueue||[]).map(r=>r.department).filter(Boolean))].forEach(d=>it.push({k:'Dept',label:d,meta:'',run:()=>detail('dept',d)}));
+  [...new Set((DATA.reviewQueue||[]).map(r=>r.country).filter(Boolean))].forEach(c=>it.push({k:'Region',label:c,meta:'',run:()=>detail('country',c)}));
+  const us=new Map();(DATA.reviewQueue||[]).forEach(r=>{if(!us.has(r.userId))us.set(r.userId,r);});
+  [...us.values()].slice(0,500).forEach(r=>it.push({k:'User',label:r.displayName,meta:r.userPrincipalName,run:()=>detail('user',r.userPrincipalName)}));
+  (DATA.devices||[]).slice(0,500).forEach(d=>it.push({k:'Device',label:d.deviceName,meta:d.operatingSystem,run:()=>detail('device',d.deviceName)}));
+  return it;
+}
+function openCmdk(){if(!DATA)return;document.getElementById('cmdkScrim').classList.add('show');document.getElementById('cmdk').classList.add('show');
+  const i=document.getElementById('cmdkInput');i.value='';i.focus();filterCmdk('');}
+function closeCmdk(){document.getElementById('cmdkScrim').classList.remove('show');document.getElementById('cmdk').classList.remove('show');}
+function filterCmdk(q){const all=cmdkBase();q=q.trim().toLowerCase();
+  let list=q?all.filter(x=>(x.label+' '+x.k+' '+x.meta).toLowerCase().includes(q)).slice(0,40):all.slice(0,8);
+  if(q&&_remote.length){const seen=new Set(list.map(x=>x.k+'|'+(x.label||'').toLowerCase()));
+    _remote.forEach(x=>{const id=x.k+'|'+(x.label||'').toLowerCase();if(!seen.has(id)){seen.add(id);list.push(x);}});list=list.slice(0,48);}
+  cmdkItems=list;cmdkActive=0;renderCmdk();}
+function renderCmdk(){const l=document.getElementById('cmdkList');
+  l.innerHTML=cmdkItems.length?cmdkItems.map((x,i)=>`<div class="it ${i===cmdkActive?'on':''}" data-i="${i}"><span class="k">${esc(x.k)}</span><span class="lb">${esc(x.label)}</span>${x.meta?`<span class="mt">${esc(x.meta)}</span>`:''}</div>`).join(''):`<div class="ce">No matches</div>`;
+  l.querySelectorAll('.it').forEach(el=>el.onclick=()=>{const x=cmdkItems[+el.dataset.i];closeCmdk();x.run();});}
+/* server-backed search: finds ANY user/device/app/SKU/department in the warehouse */
+function scheduleRemote(q){clearTimeout(_srchTimer);q=(q||'').trim();if(!DATA||DATA.isSample||q.length<2){_remote=[];return;}
+  _srchTimer=setTimeout(async()=>{const seq=++_srchSeq;
+    try{const r=await fetch('api/search?q='+encodeURIComponent(q));if(!r.ok)return;const rows=await r.json();if(seq!==_srchSeq)return;
+      const map={user:['User','user'],device:['Device','device'],app:['App','app'],sku:['License','sku'],department:['Dept','dept']};
+      _remote=(rows||[]).map(x=>{const m=map[x.kind];return m?{k:m[0],label:x.label||x.key,meta:x.meta||'',run:()=>detail(m[1],x.key)}:null;}).filter(Boolean);
+      filterCmdk(document.getElementById('cmdkInput').value);}catch(_){}},170);}
+document.getElementById('cmdkScrim').onclick=closeCmdk;
+document.getElementById('cmdkInput').addEventListener('input',e=>{filterCmdk(e.target.value);scheduleRemote(e.target.value);});
+document.getElementById('cmdkInput').addEventListener('keydown',e=>{
+  if(e.key==='ArrowDown'){e.preventDefault();cmdkActive=Math.min(cmdkActive+1,cmdkItems.length-1);renderCmdk();}
+  else if(e.key==='ArrowUp'){e.preventDefault();cmdkActive=Math.max(cmdkActive-1,0);renderCmdk();}
+  else if(e.key==='Enter'&&cmdkItems[cmdkActive]){const x=cmdkItems[cmdkActive];closeCmdk();x.run();}
+  else if(e.key==='Escape')closeCmdk();});
+document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCmdk();}});
+load();
+</script>
+</body>
+</html>

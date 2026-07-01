@@ -1,0 +1,200 @@
+# =============================================================================
+# azure-pipelines-apps.yml — Prism (AppID 0001) PHASE 2 application deployment
+# -----------------------------------------------------------------------------
+# Builds + pushes the four container images to the existing private ACR, then
+# deploys infra/apps/main.bicep (the four Prism objects) into the existing
+# Phase 1 environment. Stages: Build -> Validate -> WhatIf -> Deploy (approval).
+#
+#   Build    : `az acr build` x4 (gateway, dashboard, connectors, scoring),
+#              tagged with the build id, pushed straight into contosoprismacrdev.
+#   Validate : bicep build + `az deployment group validate`.
+#   WhatIf   : `az deployment group what-if` preview.
+#   Deploy   : `az deployment group create` (gated by the Prism-Dev approval).
+#
+# PREREQUISITES (configure once in Azure DevOps):
+#   * Service connection `dev-prism-spn` (ARM, workload-identity federation
+#     recommended) with: Contributor on the dev-prism RG AND a role that can
+#     create role assignments on the ACR (Owner or User Access Administrator) so
+#     the AcrPull grant in main.bicep succeeds. If the SPN cannot grant roles,
+#     set `grantAcrPull = false` in main.bicepparam and have it granted once
+#     out-of-band.
+#   * An Environment named `Prism-Dev` (Pipelines > Environments) with an
+#     "Approvals and checks" gate for the Deploy stage.
+#   * A BUILD agent able to reach the PRIVATE ACR. Because the registry has
+#     public network access Disabled, `az acr build` must run from an agent with
+#     network line-of-sight to the registry (a self-hosted agent in / peered to
+#     vnet-internal-non-prd). Set `buildAgentPool` below to that pool.
+#     The Validate/WhatIf/Deploy stages talk to the ARM control plane only
+#     (public) and run fine on Microsoft-hosted ubuntu-latest, as in Phase 1.
+#
+# NOTE: the SQL schema and the managed-identity DB user (DEPLOYMENT.md A2/A3)
+# are one-time data-plane steps and are NOT part of this pipeline.
+# =============================================================================
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - src/**                 # app code -> rebuild images
+      - deploy/**              # Dockerfiles
+      - infra/apps/**          # phase 2 templates
+
+pr: none
+
+variables:
+  azureServiceConnection: 'dev-prism-spn'
+  subscriptionId: '00000000-0000-0000-0000-000000000000'
+  resourceGroupName: 'dev-prism'
+  location: 'westeurope'
+  acrName: 'contosoprismacrdev'                       # registry SHORT name (no .azurecr.io)
+  templateFile: 'infra/apps/main.bicep'
+  parametersFile: 'infra/apps/main.bicepparam'
+  tag: '$(Build.BuildId)'                          # image tag for all four images
+  deploymentName: 'prism-apps-$(Build.BuildId)'
+  # Self-hosted pool able to reach the private ACR. Replace with your pool name.
+  buildAgentPool: 'dev-prism-selfhosted'
+
+stages:
+  # ---------------------------------------------------------------------------
+  - stage: Build
+    displayName: 'Build & push images (az acr build)'
+    jobs:
+      - job: build
+        displayName: 'Build 4 images into the private ACR'
+        pool:
+          name: '$(buildAgentPool)'              # MUST reach the private registry
+        steps:
+          - checkout: self
+
+          - task: AzureCLI@2
+            displayName: 'az acr build x4'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                set -euo pipefail
+                az account set --subscription "$(subscriptionId)"
+                # Build context is the repo root (the Dockerfiles COPY . . then
+                # `dotnet publish src/<Project>`); -f selects each Dockerfile.
+                az acr build --registry "$(acrName)" \
+                  --image "prism-gateway:$(tag)"    --image "prism-gateway:latest" \
+                  --file deploy/Dockerfile.gateway .
+                az acr build --registry "$(acrName)" \
+                  --image "prism-dashboard:$(tag)"  --image "prism-dashboard:latest" \
+                  --file deploy/Dockerfile.dashboard .
+                az acr build --registry "$(acrName)" \
+                  --image "prism-connectors:$(tag)" --image "prism-connectors:latest" \
+                  --file deploy/Dockerfile.connectors .
+                az acr build --registry "$(acrName)" \
+                  --image "prism-scoring:$(tag)"    --image "prism-scoring:latest" \
+                  --file deploy/Dockerfile.scoring .
+
+  # ---------------------------------------------------------------------------
+  - stage: Validate
+    displayName: 'Validate (bicep build + template validate)'
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - job: validate
+        displayName: 'Bicep build & template validation'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+          - task: AzureCLI@2
+            displayName: 'az bicep build + deployment validate'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                set -euo pipefail
+                az account set --subscription "$(subscriptionId)"
+                az bicep upgrade || az bicep install
+                az bicep build --file "$(templateFile)"
+                az deployment group validate \
+                  --resource-group "$(resourceGroupName)" \
+                  --template-file "$(templateFile)" \
+                  --parameters "$(parametersFile)" \
+                  --parameters imageTag="$(tag)" \
+                  --only-show-errors
+
+  # ---------------------------------------------------------------------------
+  - stage: WhatIf
+    displayName: 'What-If (preview changes)'
+    dependsOn: Validate
+    condition: succeeded()
+    jobs:
+      - job: whatif
+        displayName: 'az deployment group what-if'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+          - task: AzureCLI@2
+            displayName: 'What-If preview'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                set -euo pipefail
+                az account set --subscription "$(subscriptionId)"
+                az deployment group what-if \
+                  --resource-group "$(resourceGroupName)" \
+                  --template-file "$(templateFile)" \
+                  --parameters "$(parametersFile)" \
+                  --parameters imageTag="$(tag)" \
+                  --only-show-errors
+
+  # ---------------------------------------------------------------------------
+  - stage: Deploy
+    displayName: 'Deploy (approval-gated)'
+    dependsOn: WhatIf
+    condition: succeeded()
+    jobs:
+      - deployment: deploy
+        displayName: 'az deployment group create'
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'Prism-Dev'      # attach the approval check here
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                - task: AzureCLI@2
+                  displayName: 'Deploy infra/apps/main.bicep'
+                  inputs:
+                    azureSubscription: '$(azureServiceConnection)'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      set -euo pipefail
+                      az account set --subscription "$(subscriptionId)"
+                      az deployment group create \
+                        --name "$(deploymentName)" \
+                        --resource-group "$(resourceGroupName)" \
+                        --template-file "$(templateFile)" \
+                        --parameters "$(parametersFile)" \
+                        --parameters imageTag="$(tag)" \
+                        --only-show-errors
+
+                - task: AzureCLI@2
+                  displayName: 'Echo app FQDNs'
+                  inputs:
+                    azureSubscription: '$(azureServiceConnection)'
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      set -euo pipefail
+                      az account set --subscription "$(subscriptionId)"
+                      echo "Phase 2 deployment outputs (private FQDNs on the internal env domain):"
+                      az deployment group show \
+                        --name "$(deploymentName)" \
+                        --resource-group "$(resourceGroupName)" \
+                        --query properties.outputs \
+                        --only-show-errors -o jsonc

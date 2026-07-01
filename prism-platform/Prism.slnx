@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="src/Prism.Agent.Contracts/Prism.Agent.Contracts.csproj" />
+  <Project Path="src/Prism.Warehouse/Prism.Warehouse.csproj" />
+  <Project Path="src/Prism.Connectors/Prism.Connectors.csproj" />
+  <Project Path="src/Prism.Gateway/Prism.Gateway.csproj" />
+  <Project Path="src/Prism.Scoring/Prism.Scoring.csproj" />
+  <Project Path="src/Prism.Dashboard/Prism.Dashboard.csproj" />
+</Solution>

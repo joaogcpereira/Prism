@@ -1,0 +1,17 @@
+# Phase B only (desktop-agent mTLS ingestion). See DEPLOYMENT.md.
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY . .
+RUN dotnet publish src/Prism.Gateway/Prism.Gateway.csproj -c Release -o /app /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+# Microsoft.Data.SqlClient requires ICU (no invariant globalization).
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=0
+WORKDIR /app
+COPY --from=build /app .
+# Kestrel binds to Gateway:Port (it does NOT honor ASPNETCORE_URLS — see Program.cs
+# ConfigureKestrel), so set the port the app actually listens on to match EXPOSE below.
+# In Container Apps also set Gateway__BehindIngress=true so this serves plain HTTP here.
+ENV Gateway__Port=8080
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "prism-gateway.dll"]

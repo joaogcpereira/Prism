@@ -1,0 +1,91 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- Windows TFM: the tracker uses user32/kernel32 window APIs.
+         This is a superset, so the service half compiles here too. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Native AOT: one self-contained native exe, no .NET runtime to install. -->
+    <PublishAot>true</PublishAot>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>      <!-- function-pointer callbacks -->
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+
+    <!-- Footprint trimming for a large fleet. -->
+    <OptimizationPreference>Size</OptimizationPreference>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <StackTraceSupport>false</StackTraceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <EventSourceSupport>false</EventSourceSupport>
+    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+    <DebuggerSupport>false</DebuggerSupport>
+    <AutoreleasePoolSupport>false</AutoreleasePoolSupport>
+    <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
+
+    <AssemblyName>prism-agent</AssemblyName>
+    <RootNamespace>Prism.Agent</RootNamespace>
+
+    <!-- Single source of version truth (surfaced via AgentInfo at runtime).
+         Bump here; the batch AgentVersion, HTTP User-Agent, and the exe's file
+         metadata all follow. -->
+    <Version>1.2.2</Version>
+    <InformationalVersion>1.2.2</InformationalVersion>
+    <Company>Contoso</Company>
+    <Product>Contoso Prism Agent</Product>
+  </PropertyGroup>
+
+  <!-- Item 8: custom executable icon. Drop the supplied icon at
+       src/Prism.Agent/prism-agent.ico and it is embedded automatically.
+       Conditional so the build still succeeds before the icon is supplied. -->
+  <PropertyGroup Condition="Exists('prism-agent.ico')">
+    <ApplicationIcon>prism-agent.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Prism.Agent.Contracts\Prism.Agent.Contracts.csproj" />
+    <!-- Windows Event Log (service lifecycle + warnings). Separate package on
+         modern .NET; EventLogEntryType / EventLog live here. Keep the version
+         aligned with the .NET SDK major in use. -->
+    <PackageReference Include="System.Diagnostics.EventLog" Version="10.0.0" />
+  </ItemGroup>
+
+  <!--
+    Publish the single deployable exe (prism-agent.exe):
+      dotnet publish src/Prism.Agent -c Release -r win-x64   /p:PublishAot=true
+      dotnet publish src/Prism.Agent -c Release -r win-arm64 /p:PublishAot=true
+
+    Item 7: optional Authenticode signing runs automatically after publish when
+    signing parameters are supplied (see deploy/publish.ps1 for a wrapper):
+      Thumbprint (cert already in a Windows cert store):
+        dotnet publish ... /p:SigningThumbprint=<THUMBPRINT>
+      PFX file + password:
+        dotnet publish ... /p:SigningCertPath=C:\certs\prism.pfx /p:SigningCertPassword=<PWD>
+      Optional: /p:TimestampUrl=http://timestamp.digicert.com  (default shown)
+    Requires signtool.exe on PATH (Windows SDK).
+  -->
+  <PropertyGroup>
+    <SigningThumbprint Condition="'$(SigningThumbprint)' == ''"></SigningThumbprint>
+    <SigningCertPath   Condition="'$(SigningCertPath)' == ''"></SigningCertPath>
+    <SigningCertPassword Condition="'$(SigningCertPassword)' == ''"></SigningCertPassword>
+    <TimestampUrl Condition="'$(TimestampUrl)' == ''">http://timestamp.digicert.com</TimestampUrl>
+  </PropertyGroup>
+
+  <Target Name="SignPrismAgent" AfterTargets="Publish"
+          Condition="'$(SigningThumbprint)' != '' or '$(SigningCertPath)' != ''">
+    <PropertyGroup>
+      <_PrismExe>$(PublishDir)prism-agent.exe</_PrismExe>
+    </PropertyGroup>
+    <Message Importance="high" Text="Signing $(_PrismExe) ..." />
+    <!-- Store thumbprint mode -->
+    <Exec Condition="'$(SigningThumbprint)' != ''"
+          Command="signtool sign /sha1 $(SigningThumbprint) /fd SHA256 /tr $(TimestampUrl) /td SHA256 &quot;$(_PrismExe)&quot;" />
+    <!-- PFX file mode -->
+    <Exec Condition="'$(SigningThumbprint)' == '' and '$(SigningCertPath)' != ''"
+          Command="signtool sign /f &quot;$(SigningCertPath)&quot; /p $(SigningCertPassword) /fd SHA256 /tr $(TimestampUrl) /td SHA256 &quot;$(_PrismExe)&quot;" />
+  </Target>
+
+</Project>

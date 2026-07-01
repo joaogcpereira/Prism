@@ -1,0 +1,17 @@
+{
+  "_comment": "Copy to C:\\ProgramData\\Prism\\Agent\\config.json (install.ps1 writes this for you, or deploy it via an Intune config profile). Absent or empty GatewayUrl => the agent spools locally only.",
+
+  "GatewayUrl": "https://prism-gateway.purplestone-935f9d4a.westeurope.azurecontainerapps.io/api/v1/usage",
+
+  "CertIssuer": "CN=Contoso-Device-IssuingCA",
+  "CertThumbprint": null,
+
+  "_ServerCertThumbprint_note": "Leave null for the Azure Container Apps managed domain (publicly trusted + rotated). Only set this if the gateway uses a custom domain whose server cert you control.",
+  "ServerCertThumbprint": null,
+
+  "UploadIntervalSeconds": 60,
+  "MaxBatchesPerCycle": 50,
+
+  "_CompressUploads_note": "gzip batches before upload (~10x smaller). Requires the gateway from the same release (it decompresses on Content-Encoding).",
+  "CompressUploads": true
+}

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <AssemblyName>prism-connectors</AssemblyName>
+    <RootNamespace>Prism.Connectors</RootNamespace>
+    <Version>1.0.0</Version>
+    <InformationalVersion>1.0.0</InformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The only third-party dependency: resolves a token from the managed identity
+         in Azure (id-prism-platform) and from `az login` locally, so the connector is
+         testable on a workstation and runs unattended in Azure with no secret. Everything
+         else (Graph calls, JSON) is raw HttpClient + System.Text.Json source-gen. -->
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Canonical model + ingestion sinks (file/dev and SQL/prod). Brings
+         Microsoft.Data.SqlClient transitively for the SQL sink. -->
+    <ProjectReference Include="..\Prism.Warehouse\Prism.Warehouse.csproj" />
+  </ItemGroup>
+
+</Project>

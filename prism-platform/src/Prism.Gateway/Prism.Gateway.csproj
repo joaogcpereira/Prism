@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <AssemblyName>prism-gateway</AssemblyName>
+    <RootNamespace>Prism.Gateway</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Same contract types + camelCase source-gen JSON context the agent uses,
+         so the wire shape cannot drift. Keep this copy in sync with the agent's
+         Prism.Agent.Contracts (ideally promote to a shared NuGet package). -->
+    <ProjectReference Include="..\Prism.Agent.Contracts\Prism.Agent.Contracts.csproj" />
+    <!-- Canonical model + warehouse sink (used when Gateway:Sink = "warehouse"). -->
+    <ProjectReference Include="..\Prism.Warehouse\Prism.Warehouse.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Read the device-trust CA certificate from Azure Key Vault at startup via the
+         container's managed identity. The CA is a public cert stored as a Key Vault
+         SECRET (PEM), so the Secrets client is used (no certificate material in app
+         config). Azure.Identity pinned to the same version used across the solution. -->
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
+    <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.7.0" />
+  </ItemGroup>
+
+</Project>

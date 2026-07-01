@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>prism-dashboard</AssemblyName>
+    <RootNamespace>Prism.Dashboard</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Brings Microsoft.Data.SqlClient transitively; consistent connection handling. -->
+    <ProjectReference Include="..\Prism.Warehouse\Prism.Warehouse.csproj" />
+  </ItemGroup>
+
+</Project>

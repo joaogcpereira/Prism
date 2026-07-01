@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <AssemblyName>prism-scoring</AssemblyName>
+    <RootNamespace>Prism.Scoring</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- WarehouseWriter + WarehouseOptions; brings Microsoft.Data.SqlClient transitively. -->
+    <ProjectReference Include="..\Prism.Warehouse\Prism.Warehouse.csproj" />
+  </ItemGroup>
+
+</Project>
