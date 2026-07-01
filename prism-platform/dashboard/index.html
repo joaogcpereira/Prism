@@ -840,7 +840,7 @@ function viewOverview(root){
   const wrap=document.createElement('div');
   wrap.className='reveal';
   wrap.innerHTML=`
-    <p class="lede" style="margin:2px 2px 18px">License waste and recoverable spend across the Microsoft&nbsp;365 estate &mdash; read-only intelligence from Microsoft telemetry. Prism recommends; <b>you decide</b>.</p>
+    <p class="lede" style="margin:2px 2px 18px">License waste and recoverable spend across the Microsoft&nbsp;365 estate - read-only intelligence from Microsoft telemetry. Prism recommends; <b>you decide</b>.</p>
     <div class="hero">
       <div class="left">
         <div class="biglabel"><span class="eyebrow">Recoverable spend / year</span></div>
@@ -877,7 +877,7 @@ function viewOverview(root){
   root.appendChild(stats);
 
   // ACT II - concentration + signature viz
-  root.appendChild(sectionHead('Where the waste lives','The concentration story &mdash; switch between the financial waterfall and the department heatmap.',`
+  root.appendChild(sectionHead('Where the waste lives','The concentration story - switch between the financial waterfall and the department heatmap.',`
     <div class="vizswitch" id="vizswitch">
       <button data-v="waterfall" class="${VIZ==='waterfall'?'on':''}">${svg('<path d="M3 3v18h18"/><rect x="6" y="10" width="3" height="8"/><rect x="11" y="6" width="3" height="12"/><rect x="16" y="13" width="3" height="5"/>')}Waterfall</button>
       <button data-v="heatmap" class="${VIZ==='heatmap'?'on':''}">${svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>')}Heatmap</button>
@@ -894,7 +894,7 @@ function viewOverview(root){
   renderInsightTiles();
 
   // ACT III - what to do
-  root.appendChild(sectionHead('What to do first','Highest-value, high-confidence seats &mdash; the fastest path to recovered spend.',`<span class="act" onclick="go('queue')">Open Review Queue ${svg('<path d="M5 12h14M13 6l6 6-6 6"/>')}</span>`));
+  root.appendChild(sectionHead('What to do first','Highest-value, high-confidence seats - the fastest path to recovered spend.',`<span class="act" onclick="go('queue')">Open Review Queue ${svg('<path d="M5 12h14M13 6l6 6-6 6"/>')}</span>`));
   const act3=document.createElement('div');act3.className='g12';
   act3.innerHTML=`
     <div class="card"><div class="ch"><h3>Quick wins</h3><div class="sub">Ranked by confidence, then value. Click to inspect the case.</div></div><div class="cb"><div class="qw" id="quickwins"></div></div></div>
@@ -979,7 +979,7 @@ function wireWhatIf(){
 function renderViz(){
   const c=document.getElementById('vizCard');if(!c)return;
   if(VIZ==='waterfall'){
-    c.innerHTML=`<div class="ch"><h3>Recoverable spend &mdash; how the opportunity builds up</h3>
+    c.innerHTML=`<div class="ch"><h3>Recoverable spend - how the opportunity builds up</h3>
       <div class="sub">Monthly figures. Reclaimable and reviewable seats build the recoverable headline; idle (budgeted) seats add the full ceiling.</div></div>
       <div class="wflegend">
         <span class="l"><span class="sw" style="background:var(--danger)"></span>Reclaimable</span>
@@ -990,7 +990,7 @@ function renderViz(){
       <div class="wfwrap"><svg class="wf" id="wfsvg"></svg></div>`;
     drawWaterfall();
   }else{
-    c.innerHTML=`<div class="ch"><h3>Recoverable spend &mdash; department × license tier</h3>
+    c.innerHTML=`<div class="ch"><h3>Recoverable spend - department × license tier</h3>
       <div class="sub">Where flagged value concentrates. Darker = more recoverable €/mo. Click a cell to drill into the queue.</div></div>
       <div class="hmscale"><span>Less</span><span class="grad"></span><span>More</span><span style="margin-left:auto;color:var(--faint)">€/mo recoverable, monthly</span></div>
       <div class="hmwrap" id="hmwrap"></div>`;
@@ -1118,9 +1118,9 @@ function renderInsightTiles(){
   const tile=(icon,label,big,desc,onclick)=>`<div class="itile${onclick?' click':''}" ${onclick?`onclick="${onclick}"`:''}>
     <div class="ih">${svg(icon)}<span class="t">${label}</span></div><div class="big">${big}</div><div class="desc">${desc}</div></div>`;
   el.innerHTML=
-    tile('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>','Concentration',`${n80} <small>SKUs</small>`,`drive <b>80%</b> of recoverable spend &mdash; focus here first`,`drill({})`)
+    tile('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>','Concentration',`${n80} <small>SKUs</small>`,`drive <b>80%</b> of recoverable spend - focus here first`,`drill({})`)
    +tile('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>','Avg. age of waste',avgIdle==null?'&ndash;':`${avgIdle} <small>days</small>`,avgIdle==null?'idle data lands with agent telemetry':`reclaim seats have been idle this long on average`,`drill({verdict:'RECLAIM'})`)
-   +tile('<path d="M20 7L9 18l-5-5"/>','Cleanup wins',`${ghosts} <small>seats</small>`,`on <b>disabled or offboarded</b> accounts &mdash; safe, immediate reclaim`,`drill({verdict:'RECLAIM',search:'account'})`)
+   +tile('<path d="M20 7L9 18l-5-5"/>','Cleanup wins',`${ghosts} <small>seats</small>`,`on <b>disabled or offboarded</b> accounts - safe, immediate reclaim`,`drill({verdict:'RECLAIM',search:'account'})`)
    +tile('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>','Top app vendor',topVendor?esc(topVendor[0]):'&ndash;',topVendor?`<b>${eur(topVendor[1])}/yr</b> committed application exposure`:'app data pending',topVendor?`detail('vendor',${escq(JSON.stringify(topVendor[0]))})`:`go('apps')`);
 }
 
@@ -1198,9 +1198,9 @@ function renderTrend(){
 function renderAssurance(){
   const el=document.getElementById('assurance');if(!el)return;
   const items=[
-    ['Read-only by design','Prism reads Microsoft telemetry. It never assigns, removes, or changes a license &mdash; every action stays a human decision.'],
+    ['Read-only by design','Prism reads Microsoft telemetry. It never assigns, removes, or changes a license - every action stays a human decision.'],
     ['Every verdict is explainable','Each flag carries reason codes grounded in 30/60/90-day SAM/FinOps reclamation practice.'],
-    ['Conservative by default','Open (unassigned) seats are excluded from headline savings &mdash; budgeted at renewal, not double-counted.'],
+    ['Conservative by default','Open (unassigned) seats are excluded from headline savings - budgeted at renewal, not double-counted.'],
   ];
   el.innerHTML=items.map(([t,d])=>`<div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-soft)">
     <span style="width:26px;height:26px;border-radius:8px;background:var(--green-soft);display:grid;place-items:center;flex:none">
@@ -1394,7 +1394,7 @@ function exportQueue(){
    APPLICATIONS
    ════════════════════════════════════════════════════════════════════════ */
 function viewApps(root){
-  bladeHead(root,'Applications','Every application installed across the estate, paid or not &mdash; priced where a watched-app pattern matches, otherwise shown for visibility only. Annual exposure = unit price × installs.');
+  bladeHead(root,'Applications','Every application installed across the estate, paid or not - priced where a watched-app pattern matches, otherwise shown for visibility only. Annual exposure = unit price × installs.');
   const apps=DATA.watchedApps||[];
   const priced=apps.filter(a=>a.annualExposure>0);
   const totalExp=priced.reduce((t,a)=>t+a.annualExposure,0);
