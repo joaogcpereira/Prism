@@ -105,7 +105,7 @@ Prism ingests **16 read-only connectors** into an Azure SQL warehouse. Everythin
 | Azure Resource Manager | Cost Management + Price Sheet |
 | Prism desktop agent (optional) | Foreground app usage over mutual TLS |
 
-All egress is to Microsoft endpoints only. The connectors share one throttle-hardened HTTP client that honours each API's `Retry-After` and backs off on 5xx; a connector that fails never aborts the rest. Security-scoped connectors (Defender, Copilot, sign-ins) are **off by default** and enabled per deployment.
+All egress is to Microsoft endpoints only. The connectors share one throttle-hardened HTTP client that honours each API's `Retry-After` and backs off on 5xx; a connector that fails never aborts the rest.
 
 ---
 
