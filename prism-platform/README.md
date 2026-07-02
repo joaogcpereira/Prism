@@ -80,8 +80,8 @@ supply is `sqlAdminObjectId` (the object id from §0).
 
 ```bicep
 param location                = 'westeurope'
-param suffix                  = 'nob01'          // fixed in prod - keep it stable
-param managedIdentityName     = 'id-im-prism-platform'
+param suffix                  = 'cts01'
+param managedIdentityName     = 'id-mi-prism-platform'
 param managedIdentityClientId = '<mi client id>'
 param sqlAdminUpn             = 'sqladmin@contoso.com'
 param sqlAdminObjectId        = '<your object id>'   // <-- fill this in
@@ -167,8 +167,8 @@ var on the running job with `az containerapp job update -g <rg> -n prism-connect
 | Defender for Endpoint inventory | `enableMdeConnector` (+ `mdeTenantId`, `mdeAppId`) | `Software.Read.All` (WindowsDefenderATP) |
 | Defender Advanced Hunting (process runs) | `enableMdeHunting` | `AdvancedQuery.Read.All` |
 | Entra per-app sign-ins | `enableSignInConnector` | `AuditLog.Read.All` |
-| M365 Apps usage | `enableM365AppUsage` | `Reports.Read.All` (already granted) |
-| Deleted-but-licensed users | `includeDeletedUserLics` | `Directory.Read.All` (already granted) |
+| M365 Apps usage | `enableM365AppUsage` | `Reports.Read.All` |
+| Deleted-but-licensed users | `includeDeletedUserLics` | `Directory.Read.All` |
 | Copilot usage | `enableCopilotConnector` | `Reports.Read.All` |
 | Teams activity | `enableTeamsActivity` | `Reports.Read.All` |
 | Mailbox/OneDrive/SharePoint detail | `enableServiceDetail` | `Reports.Read.All` |
@@ -191,7 +191,7 @@ az ad app federated-credential create --id "$APP_ID" --parameters "{
   \"audiences\":[\"api://AzureADTokenExchange\"]
 }"
 # Grant Software.Read.All (+ AdvancedQuery.Read.All for hunting) on WindowsDefenderATP
-#   (appId fc780465-2017-40d4-a0c5-307022471b92), Application type, then admin-consent.
+#   appId, Application type, then admin-consent.
 ```
 
 Pass `enableMdeConnector=true`, `mdeAppId=$APP_ID`, `mdeTenantId=<tenant>` (the schema and views
