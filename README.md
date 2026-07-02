@@ -41,7 +41,7 @@ It is **read-only by design** - Prism reads from Microsoft 365, writes verdicts 
 | Is the licensed **desktop app** used? | Prism agent foreground-time **and** Defender process-run telemetry |
 | Is the licensed **web service** used? | Entra per-application sign-ins (Power BI, Project, …) |
 | Are the **Office apps** actually opened? | M365 Apps usage report, Teams activity, mailbox/OneDrive/SharePoint activity |
-| Is **Copilot** (the priciest seat) used? | Microsoft 365 Copilot usage report |
+| Is **Copilot** used? | Microsoft 365 Copilot usage report |
 | Is the software even **installed**? | Intune detected apps **and** Defender for Endpoint inventory |
 | What does the waste **cost**? | Azure Cost Management + your negotiated price sheet |
 
