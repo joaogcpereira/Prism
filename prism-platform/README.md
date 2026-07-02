@@ -250,20 +250,11 @@ az keyvault secret set --vault-name contoso-prism-dev --name prism-device-ca --f
 ### 5b. Wire it up in the apps deployment (`infra/apps/main.bicep` / `main.bicepparam`)
 
 - `keyVaultName` / `keyVaultResourceGroupName` / `caCertificateName` - the existing vault, its
-  resource group, and the **secret** name from §5a. At Contoso the vault is `contoso-prism-dev` in the
-  **shared `dev-prism-shr`** RG while the apps are in `dev-prism`, so `keyVaultResourceGroupName` is
-  set to `dev-prism-shr`. The role grant is applied through a module (`keyvault-role.bicep`) scoped
-  to that RG, since a role assignment is created in the RG it targets.
+  resource group, and the **secret** name from §5a.
 - `grantKeyVaultAccess=true` (default) grants the managed identity the built-in **Key Vault
-  Secrets User** role (`4633458b-…`) on the vault. Because the vault sits in a **shared** RG, the
-  deploy service principal may not be allowed to create role assignments there - if the deploy
-  fails on authorization, set `grantKeyVaultAccess=false` and ask the vault owner to grant **Key
-  Vault Secrets User** to `id-im-prism-platform` once. (If the vault uses the legacy access-policy
-  model rather than Azure RBAC, do the same and add a `secrets: get` access policy instead.)
+  Secrets User** role (`4633458b-…`) on the vault.
 - The gateway env vars `Gateway__CaCertificateKeyVaultUri`, `Gateway__CaCertificateName` and
-  `Gateway__ManagedIdentityClientId` are populated automatically from those parameters. Cross-RG
-  RBAC is fine at runtime - the identity reads the secret regardless of which RG the vault is in.
-  (For local dev only, `Gateway:CaCertificatePem` / `Gateway:CaCertificatePath` remain fallbacks.)
+  `Gateway__ManagedIdentityClientId` are populated automatically from those parameters.
 
 The agent ships usage over mutual TLS; the gateway writes it straight to `fact.AppUsage`, and
 scoring picks up the foreground-time signal automatically. Deploy/upgrade the gateway before the
@@ -278,8 +269,6 @@ agent fleet. Rotating the CA secret in Key Vault is picked up on the next gatewa
 - **On demand:** `az containerapp job start -g <rg> -n prism-connectors` (then `prism-scoring`).
 - **Logs:** Container Apps → each job → Execution history → Console. For retention, wire a Log
   Analytics workspace to the environment (recommended for production).
-- **New version:** the pipeline rebuilds and redeploys on push. By hand: `az acr build … -t
-  prism-connectors:v2 …` then `az containerapp job update --image …`.
 - **The connectors job has no artificial timeout** - Graph throttling can legitimately stretch a
   full per-device sweep, so the only ceiling is the job's `replicaTimeout` (24h in the Bicep).
 
@@ -288,7 +277,7 @@ agent fleet. Rotating the CA secret in Key Vault is picked up on the next gatewa
 ## 7. Cost
 
 Azure SQL serverless (auto-pauses when idle) + Container Apps Jobs (scale to zero, two short runs
-a day) + one small dashboard replica + Basic ACR ≈ **€30–70 / month** at Contoso's size. The
+a day) + one small dashboard replica + Basic ACR ≈ **€30–70 / month** at 2000 device size. The
 dashboard replica is the only always-on cost; set its `minReplicas` to 0 if a cold start is fine.
 
 ---
