@@ -237,7 +237,7 @@ Issues and pull requests are welcome - new connectors, additional reason codes, 
 
 ## License
 
-Released under the **MIT License** - see [`LICENSE`](prism-platform/LICENSE).
+Released under the **MIT License**.
 
 ## Disclaimer
 
