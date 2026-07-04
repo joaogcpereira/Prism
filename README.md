@@ -44,7 +44,7 @@ It is **read-only by design** - Prism reads from Microsoft 365, writes verdicts 
 | Is the licensed **desktop app** used? | Prism agent foreground-time **and** Defender process-run telemetry |
 | Is the licensed **web service** used? | Entra per-application sign-ins (Power BI, Project, …) |
 | Are the **Office apps** actually opened? | M365 Apps usage report, Teams activity, mailbox/OneDrive/SharePoint activity |
-| Is **Copilot** (the priciest seat) used? | Microsoft 365 Copilot usage report |
+| Is **Copilot** used? | Microsoft 365 Copilot usage report |
 | Is the software even **installed**? | Intune detected apps **and** Defender for Endpoint inventory |
 | What does the waste **cost**? | Azure Cost Management + your negotiated price sheet |
 
@@ -86,12 +86,12 @@ Prism ingests **19 read-only connectors** into an Azure SQL warehouse. Everythin
 - Defender for Endpoint **Advanced Hunting** process-run telemetry (agentless "did this app actually run" evidence)
 - Defender for Cloud Apps discovered apps (shadow-IT SaaS)
 
-### Identity lifecycle & mailbox truth (v2)
+### Identity lifecycle & mailbox truth
 - **Mailbox `userPurpose`** - the *deterministic* shared / room / equipment discriminator (replaces the name-pattern heuristic), plus auto-reply state (an active out-of-office **blocks** reclaim: leave of absence is the most damaging false positive there is)
 - **Auth-method registration** - a holder who never registered MFA/SSPR was never onboarded: positive corroboration for `NEVER_ACTIVE`
 - **User type** (Member vs **Guest** - a paid SKU on a guest account is a governance flag) and hybrid-sync provenance
 
-### Calling (v2)
+### Calling
 - **Teams PSTN call records** (`getPstnCalls`) - real public-network calls per user; the authoritative Teams Phone signal, far stronger than the Teams report's coarse call count
 
 ### Cost
@@ -131,7 +131,7 @@ The scoring engine is deterministic and conservative - *surface and explain; a h
 - **High-value paths:** unused **Copilot** seats, **Teams Phone** numbers with zero calls, **shallow-use** downgrade candidates, **leaver** offboarding, disabled accounts, disabled service plans, and phantom **Visio/Project/Power BI** add-ons.
 - **Free / €0 SKUs** are never waste (`FREE_SKU`).
 - Every rule carries a **reason code** - 45+ in total - so verdicts stay explainable seat by seat.
-- **v2 - every verdict carries its evidence.** Each seat records how many independent sources were consulted (`SignalCount`) and a compact per-signal trail (`EvidenceJson`) the dashboard renders as a case file: what each signal said, and - just as important - which signals were *silent* (absence is never counted as evidence). Verdict history is kept per run (`score.VerdictHistory`) so trends and "what changed since last run" are first-class, and human decisions (keep / snooze-until / approve-reclaim, with a rationale note) live in an append-only audit log that re-scoring can never overwrite.
+- **Every verdict carries its evidence.** Each seat records how many independent sources were consulted (`SignalCount`) and a compact per-signal trail (`EvidenceJson`) the dashboard renders as a case file: what each signal said, and - just as important - which signals were *silent* (absence is never counted as evidence). Verdict history is kept per run (`score.VerdictHistory`) so trends and "what changed since last run" are first-class, and human decisions (keep / snooze-until / approve-reclaim, with a rationale note) live in an append-only audit log that re-scoring can never overwrite.
 
 Full doctrine, thresholds, and the complete reason-code glossary are in **[`SCORING.md`](SCORING.md)**.
 
@@ -233,12 +233,12 @@ The optional Windows agent lives in its own repository (**prism-agent**).
 
 ## Contributing
 
-Issues and pull requests are welcome - new connectors (e.g., mailbox `RecipientTypeDetails`), additional reason codes, and dashboard drill-downs especially. Please keep the core principles intact: read-only, deterministic, absence-is-not-evidence, human-in-the-loop.
+Issues and pull requests are welcome - new connectors, additional reason codes, and dashboard drill-downs especially. Please keep the core principles intact: read-only, deterministic, absence-is-not-evidence, human-in-the-loop.
 
 ## License
 
-Released under the **MIT License** - see [`LICENSE`](LICENSE). *(Add a `LICENSE` file with your chosen license before publishing.)*
+Released under the **MIT License** - see [`LICENSE`](LICENSE).
 
 ## Disclaimer
 
-Prism is provided as-is. It reads your Microsoft 365 / Azure data and produces recommendations; **you** own the decision to act on any verdict. Validate reclaim candidates on real data before enabling any auto-reclaim flag. Not affiliated with or endorsed by Microsoft. "Contoso" is Microsoft's standard sample organization name and is used here as a placeholder - replace it with your own values.
+Prism is provided as-is. It reads your Microsoft 365 / Azure data and produces recommendations; **you** own the decision to act on any verdict. Validate reclaim candidates on real data before enabling any auto-reclaim flag.
