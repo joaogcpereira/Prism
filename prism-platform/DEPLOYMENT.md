@@ -46,6 +46,7 @@ sqlcmd -S <server>.database.windows.net -d prism -G -i schema/seed-commercial.sq
 ```
 
 - **`schema/schema.sql`** is the entire warehouse - every schema, table, index, analytic view,
+<<<<<<< HEAD
   and the curated product reference data. It is idempotent **and self-migrating**: new v2
   columns are guarded `ALTER`s, changed indexes drop-and-recreate under `*_v2` names, so
   re-running it upgrades an existing database in place.
@@ -59,6 +60,12 @@ sqlcmd -S <server>.database.windows.net -d prism -G -i schema/seed-commercial.sq
   methods) are **off by default**; enable them per `infra/scripts/grant-prism-identity.ps1`'s
   scope notes (`MailboxSettings.Read`, `CallRecord-PstnCalls.Read.All`). Full release notes:
   `CHANGELOG.md`.
+=======
+  and the curated product reference data. It is idempotent: safe to re-run any time.
+- **`schema/seed-commercial.sql`** loads your negotiated EUR unit prices and EA contract
+  quantities. Edit it to match your contract; re-run after edits. (You can instead maintain
+  `ref.SkuCost` by hand or wire the pricing connector - see `PRICING.md`.)
+>>>>>>> 78331c20c8456251821a9fc0bdb0410cf36fd66f
 
 **Grant the managed identity database access** (read + write to Prism's own database only - this
 grants nothing in Microsoft 365):
@@ -89,8 +96,13 @@ supply is `sqlAdminObjectId` (the object id from §0).
 
 ```bicep
 param location                = 'westeurope'
+<<<<<<< HEAD
 param suffix                  = 'nob01'          // fixed in prod - keep it stable
 param managedIdentityName     = 'id-im-prism-platform'
+=======
+param suffix                  = 'cts01'
+param managedIdentityName     = 'id-mi-prism-platform'
+>>>>>>> 78331c20c8456251821a9fc0bdb0410cf36fd66f
 param managedIdentityClientId = '<mi client id>'
 param sqlAdminUpn             = 'sqladmin@contoso.com'
 param sqlAdminObjectId        = '<your object id>'   // <-- fill this in
@@ -176,8 +188,8 @@ var on the running job with `az containerapp job update -g <rg> -n prism-connect
 | Defender for Endpoint inventory | `enableMdeConnector` (+ `mdeTenantId`, `mdeAppId`) | `Software.Read.All` (WindowsDefenderATP) |
 | Defender Advanced Hunting (process runs) | `enableMdeHunting` | `AdvancedQuery.Read.All` |
 | Entra per-app sign-ins | `enableSignInConnector` | `AuditLog.Read.All` |
-| M365 Apps usage | `enableM365AppUsage` | `Reports.Read.All` (already granted) |
-| Deleted-but-licensed users | `includeDeletedUserLics` | `Directory.Read.All` (already granted) |
+| M365 Apps usage | `enableM365AppUsage` | `Reports.Read.All` |
+| Deleted-but-licensed users | `includeDeletedUserLics` | `Directory.Read.All` |
 | Copilot usage | `enableCopilotConnector` | `Reports.Read.All` |
 | Teams activity | `enableTeamsActivity` | `Reports.Read.All` |
 | Mailbox/OneDrive/SharePoint detail | `enableServiceDetail` | `Reports.Read.All` |
@@ -200,7 +212,7 @@ az ad app federated-credential create --id "$APP_ID" --parameters "{
   \"audiences\":[\"api://AzureADTokenExchange\"]
 }"
 # Grant Software.Read.All (+ AdvancedQuery.Read.All for hunting) on WindowsDefenderATP
-#   (appId fc780465-2017-40d4-a0c5-307022471b92), Application type, then admin-consent.
+#   appId, Application type, then admin-consent.
 ```
 
 Pass `enableMdeConnector=true`, `mdeAppId=$APP_ID`, `mdeTenantId=<tenant>` (the schema and views
@@ -259,6 +271,7 @@ az keyvault secret set --vault-name contoso-prism-dev --name prism-device-ca --f
 ### 5b. Wire it up in the apps deployment (`infra/apps/main.bicep` / `main.bicepparam`)
 
 - `keyVaultName` / `keyVaultResourceGroupName` / `caCertificateName` - the existing vault, its
+<<<<<<< HEAD
   resource group, and the **secret** name from §5a. At Contoso the vault is `contoso-prism-dev` in the
   **shared `dev-prism-shr`** RG while the apps are in `dev-prism`, so `keyVaultResourceGroupName` is
   set to `dev-prism-shr`. The role grant is applied through a module (`keyvault-role.bicep`) scoped
@@ -273,6 +286,13 @@ az keyvault secret set --vault-name contoso-prism-dev --name prism-device-ca --f
   `Gateway__ManagedIdentityClientId` are populated automatically from those parameters. Cross-RG
   RBAC is fine at runtime - the identity reads the secret regardless of which RG the vault is in.
   (For local dev only, `Gateway:CaCertificatePem` / `Gateway:CaCertificatePath` remain fallbacks.)
+=======
+  resource group, and the **secret** name from §5a.
+- `grantKeyVaultAccess=true` (default) grants the managed identity the built-in **Key Vault
+  Secrets User** role (`4633458b-…`) on the vault.
+- The gateway env vars `Gateway__CaCertificateKeyVaultUri`, `Gateway__CaCertificateName` and
+  `Gateway__ManagedIdentityClientId` are populated automatically from those parameters.
+>>>>>>> 78331c20c8456251821a9fc0bdb0410cf36fd66f
 
 The agent ships usage over mutual TLS; the gateway writes it straight to `fact.AppUsage`, and
 scoring picks up the foreground-time signal automatically. Deploy/upgrade the gateway before the
@@ -287,8 +307,11 @@ agent fleet. Rotating the CA secret in Key Vault is picked up on the next gatewa
 - **On demand:** `az containerapp job start -g <rg> -n prism-connectors` (then `prism-scoring`).
 - **Logs:** Container Apps → each job → Execution history → Console. For retention, wire a Log
   Analytics workspace to the environment (recommended for production).
+<<<<<<< HEAD
 - **New version:** the pipeline rebuilds and redeploys on push. By hand: `az acr build … -t
   prism-connectors:v2 …` then `az containerapp job update --image …`.
+=======
+>>>>>>> 78331c20c8456251821a9fc0bdb0410cf36fd66f
 - **The connectors job has no artificial timeout** - Graph throttling can legitimately stretch a
   full per-device sweep, so the only ceiling is the job's `replicaTimeout` (24h in the Bicep).
 
@@ -297,7 +320,7 @@ agent fleet. Rotating the CA secret in Key Vault is picked up on the next gatewa
 ## 7. Cost
 
 Azure SQL serverless (auto-pauses when idle) + Container Apps Jobs (scale to zero, two short runs
-a day) + one small dashboard replica + Basic ACR ≈ **€30–70 / month** at Contoso's size. The
+a day) + one small dashboard replica + Basic ACR ≈ **€30–70 / month** at 2000 device size. The
 dashboard replica is the only always-on cost; set its `minReplicas` to 0 if a cold start is fine.
 
 ---
