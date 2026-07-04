@@ -7,7 +7,7 @@
 //  agent and MDE hunting only see desktop EXEs; getOffice365Active-
 //  UserDetail only sees Exchange/SharePoint/OneDrive/Teams/Yammer/
 //  Skype. A user who lives in the Power BI *service* or Project *web*
-//  is invisible to all of them — but every such session is an Entra
+//  is invisible to all of them - but every such session is an Entra
 //  sign-in. We pull /auditLogs/signIns for the configured apps and
 //  aggregate to "last time user U signed into app A (+ count)".
 //
@@ -76,7 +76,7 @@ public sealed class SignInConnector : IConnector
         // Pass 1: interactive sign-ins (the endpoint's default event type).
         scanned += await PageIntoAsync(agg, baseFilter, days, ct);
 
-        // Pass 2: non-interactive sign-ins — a user's own client silently redeeming a token to
+        // Pass 2: non-interactive sign-ins - a user's own client silently redeeming a token to
         // reach the licensed service, i.e. real usage. Very high volume, so only when the query
         // is bounded to specific apps; otherwise it would scan the whole tenant's token traffic.
         if (pullNonInteractive)
@@ -94,7 +94,7 @@ public sealed class SignInConnector : IConnector
             }
         }
         else if (_opts.SignInIncludeNonInteractive)
-            _log.LogInformation("Per-app sign-ins: non-interactive pass skipped (no SignInAppIds configured — it would be unbounded).");
+            _log.LogInformation("Per-app sign-ins: non-interactive pass skipped (no SignInAppIds configured - it would be unbounded).");
 
         await _sink.WriteAsync("app-signins", agg.Values.Select(x => Envelope(x, snapshotUtc)), ct);
         _log.LogInformation("Per-app sign-ins: {Pairs} (user, app) pair(s) from {Scanned} event(s), {Days}d window.",

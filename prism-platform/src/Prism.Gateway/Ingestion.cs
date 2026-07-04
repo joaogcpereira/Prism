@@ -112,7 +112,7 @@ public static class IngestHandler
         {
             // Parse with the SAME source-gen context the agent serialises with.
             // The agent gzips batches (Content-Encoding: gzip); decompress with a hard
-            // cap — MaxRequestBodySize bounds only the COMPRESSED size, so even an
+            // cap - MaxRequestBodySize bounds only the COMPRESSED size, so even an
             // authenticated device must not be able to send a decompression bomb.
             if (ctx.Request.Headers.ContentEncoding.ToString().Contains("gzip", StringComparison.OrdinalIgnoreCase))
             {

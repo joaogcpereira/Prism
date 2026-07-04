@@ -126,7 +126,7 @@ public sealed class MdeSoftwareConnector : IConnector
             catch (Exception ex) when (ex is HttpRequestException or JsonException)
             {
                 // A title that errors out (e.g. transient 5xx beyond the ceiling) is
-                // logged and skipped — never aborts the whole sweep.
+                // logged and skipped - never aborts the whole sweep.
                 _log.LogWarning("machineReferences failed for {Id} ({Msg}); skipping that title.", sw.SoftwareId, ex.Message);
             }
 

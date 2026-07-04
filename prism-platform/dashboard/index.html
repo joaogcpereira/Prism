@@ -550,6 +550,84 @@ table.data tbody tr:last-child td{border-bottom:0}
 .cmdk .it .lb{flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmdk .it .mt{font-size:11.5px;color:var(--dim);font-family:var(--f-num)}
 .cmdk .ce{padding:26px;text-align:center;color:var(--dim);font-size:13px}
+
+/* ── v2: decision actions (keep / snooze / reclaim per queue row) ── */
+.acts{display:flex;gap:5px;align-items:center}
+.act-btn{width:29px;height:29px;border-radius:9px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer;color:var(--muted);transition:.14s var(--ease)}
+.act-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.act-btn:hover{transform:translateY(-1px);box-shadow:var(--e1)}
+.act-btn.keep:hover{color:var(--keep);border-color:var(--keep)}
+.act-btn.snooze:hover{color:var(--review);border-color:var(--review)}
+.act-btn.reclaim:hover{color:var(--danger);border-color:var(--danger)}
+.act-btn.ev:hover{color:var(--green);border-color:var(--green-line)}
+.decided-chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;cursor:pointer}
+.decided-chip.keep{background:var(--keep-soft);color:var(--keep)}
+.decided-chip.reclaim{background:var(--danger-soft);color:var(--danger)}
+.decided-chip.snooze{background:var(--review-soft);color:var(--review)}
+tr.handled td{opacity:.52}
+tr.handled:hover td{opacity:.85}
+
+/* ── v2: evidence drawer (right sheet) ── */
+.evScrim{position:fixed;inset:0;background:rgba(10,18,14,.42);backdrop-filter:blur(2px);z-index:80;display:none}
+.evScrim.show{display:block}
+.evsheet{position:fixed;top:0;right:0;bottom:0;width:min(600px,95vw);z-index:81;background:var(--panel);border-left:1px solid var(--line);
+  box-shadow:var(--e3);transform:translateX(103%);transition:transform .28s var(--ease-out);display:flex;flex-direction:column}
+.evsheet.show{transform:none}
+.evsheet .eh{padding:22px 26px 16px;border-bottom:1px solid var(--line)}
+.evsheet .eh .eyebrow{margin-bottom:6px}
+.evsheet .eh h2{font-family:var(--f-display);font-weight:600;font-size:22px;color:var(--text);line-height:1.15}
+.evsheet .eh .sub{font-size:12.5px;color:var(--muted);margin-top:4px}
+.evsheet .ebody{flex:1;overflow-y:auto;padding:20px 26px 30px;display:flex;flex-direction:column;gap:20px}
+.evsheet .eclose{position:absolute;top:18px;right:20px}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.sig{border:1px solid var(--line);border-radius:12px;padding:11px 13px;background:var(--panel-2)}
+.sig .sn{display:flex;align-items:center;gap:7px;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);font-weight:700}
+.sig .sn .sdot{width:7px;height:7px;border-radius:50%;flex:none}
+.sig.pos .sdot{background:var(--green)}.sig.neg .sdot{background:var(--danger)}.sig.mut .sdot{background:var(--faint)}
+.sig .sv{font-family:var(--f-num);font-size:14px;font-weight:600;color:var(--text);margin-top:5px}
+.sig .sd{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.45}
+.sigabsent{font-size:11.5px;color:var(--dim);line-height:1.6}
+.sigabsent code{font-family:var(--f-num);font-size:10px;background:var(--field);padding:1px 6px;border-radius:5px;margin:0 2px}
+.evhist{display:flex;align-items:flex-end;gap:4px;height:56px;padding:4px 0}
+.evhist .hb{flex:1;border-radius:4px 4px 0 0;min-height:6px;position:relative;cursor:default}
+.evhist .hb.RECLAIM{background:var(--danger)}.evhist .hb.REVIEW{background:var(--review)}.evhist .hb.KEEP{background:var(--green)}
+.decision-note{background:var(--field);border:1px solid var(--line);border-radius:11px;padding:12px 14px;font-size:12.5px;color:var(--muted);line-height:1.55}
+.decision-note b{color:var(--text)}
+
+/* ── v2: decision modal ── */
+.dlg{position:fixed;z-index:95;top:50%;left:50%;transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;
+  width:min(480px,94vw);background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--e3);
+  transition:.2s var(--ease-out)}
+.dlg.show{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
+.dlg .dh{padding:22px 24px 0}
+.dlg .dh h3{font-family:var(--f-display);font-weight:600;font-size:19px;color:var(--text)}
+.dlg .dh .sub{font-size:12.5px;color:var(--muted);margin-top:5px;line-height:1.5}
+.dlg .db{padding:16px 24px;display:flex;flex-direction:column;gap:13px}
+.dlg .db label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:700;display:block;margin-bottom:6px}
+.dlg .db textarea{width:100%;min-height:64px;resize:vertical;border:1px solid var(--line);border-radius:11px;background:var(--panel);
+  padding:10px 13px;font-family:var(--f-body);font-size:13px;color:var(--text)}
+.dlg .db textarea:focus,.dlg .db input:focus{outline:none;border-color:var(--green-line);box-shadow:0 0 0 3px var(--green-soft)}
+.dlg .db input[type=date]{width:100%}
+.dlg .df{display:flex;justify-content:flex-end;gap:9px;padding:4px 24px 22px}
+
+/* ── v2: toast ── */
+.toastbox{position:fixed;bottom:26px;left:50%;transform:translate(-50%,12px);z-index:99;background:var(--text);color:var(--bg);
+  font-size:12.5px;font-weight:600;padding:10px 20px;border-radius:24px;box-shadow:var(--e3);opacity:0;transition:.25s var(--ease);pointer-events:none}
+.toastbox.show{opacity:1;transform:translate(-50%,0)}
+
+/* ── v2: what-changed + data-health rows ── */
+.chg{display:grid;grid-template-columns:86px 1fr auto;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid var(--line-soft);font-size:13px}
+.chg:last-child{border-bottom:0}
+.chg .ck{font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;text-align:center;padding:3px 0;border-radius:7px}
+.chg .ck.ESCALATED,.chg .ck.NEW{background:var(--danger-soft);color:var(--danger)}
+.chg .ck.RELAXED,.chg .ck.GONE{background:var(--keep-soft);color:var(--keep)}
+.chg .ck.CHANGED{background:var(--review-soft);color:var(--review)}
+.fresh{display:grid;grid-template-columns:10px 1fr auto auto;align-items:center;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line-soft);font-size:12.5px}
+.fresh:last-child{border-bottom:0}
+.fresh .fd{width:9px;height:9px;border-radius:50%}
+.fresh .fd.ok{background:var(--green)}.fresh .fd.warn{background:var(--review)}.fresh .fd.bad{background:var(--danger)}
+.fresh .fe{font-weight:600;color:var(--text);font-family:var(--f-num);font-size:11.5px}
+.fresh .fm{font-size:11px;color:var(--dim);font-family:var(--f-num)}
 </style>
 </head>
 <body>
@@ -597,6 +675,33 @@ table.data tbody tr:last-child td{border-bottom:0}
     <input id="cmdkInput" placeholder="Search users, devices, licenses, apps, departments…" autocomplete="off" spellcheck="false"></div>
   <div class="cl" id="cmdkList"></div>
 </div>
+
+<!-- v2: EVIDENCE DRAWER - the full case file behind one verdict -->
+<div class="evScrim" id="evScrim"></div>
+<aside class="evsheet" id="evsheet" aria-label="Evidence">
+  <div class="eh">
+    <div class="eyebrow">Evidence · why Prism thinks this</div>
+    <h2 id="evTitle"></h2><div class="sub" id="evSub"></div>
+    <button class="qbtn eclose" onclick="closeEvidence()" title="Close">
+      <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div class="ebody" id="evBody"></div>
+</aside>
+
+<!-- v2: DECISION MODAL - the human's call, with rationale, into the audit log -->
+<div class="dlg" id="decDlg" role="dialog" aria-modal="true">
+  <div class="dh"><h3 id="decTitle">Record decision</h3><div class="sub" id="decSub"></div></div>
+  <div class="db">
+    <div id="decSnoozeWrap" style="display:none"><label>Snooze until</label>
+      <input type="date" class="input" id="decSnooze"></div>
+    <div><label>Why? - kept in the audit log</label>
+      <textarea id="decNote" maxlength="400" placeholder="e.g. Confirmed with manager: parental leave until Q4 - revisit then."></textarea></div>
+  </div>
+  <div class="df"><button class="btn ghost" onclick="closeDecision()">Cancel</button>
+    <button class="btn primary" id="decGo" onclick="submitDecision()">Record decision</button></div>
+</div>
+
+<div class="toastbox" id="toastbox"></div>
 
 <script>
 /* ════════════════════════════════════════════════════════════════════════
@@ -712,11 +817,48 @@ function buildSample(){
         department:d.department,country:d.country,version:pick(vers),fgActiveHours90:hrs,activeDays90:hrs>0?Math.min(90,Math.round(hrs/3)):0,
         usageState:hrs>40?'Active':hrs>5?'Light':hrs>0?'Open-only':'Dormant',lastUsedDate:hrs>0?`2026-0${1+Math.floor(rnd()*6)}-${String(1+Math.floor(rnd()*27)).padStart(2,'0')}`:null});});
   });
-  return {summary,reviewQueue:rows,skus:util,unpriced,history,watchedApps,rightsize,overlap,renewals,reallocation,licenseUsage,devices,installs,isSample:true};
+  // ── v2 sample layers: evidence trails, decisions, run-over-run changes, data health ──
+  rows.forEach((r,i)=>{
+    r.signalCount=3+Math.floor(rnd()*5);
+    const idle=r.effectiveInactiveDays;
+    r.evidenceJson=JSON.stringify({
+      signin:{i:idle==null?null:idle,ni:idle==null?null:Math.max(0,idle-4),ok:idle==null?null:idle},
+      m365:{any:idle==null?null:idle+2,teams:idle==null?null:idle+3,mail:idle==null?null:Math.max(0,idle-1),od:null,sp:null},
+      ...(r.skuPartNumber==='Microsoft_365_Copilot'?{copilot:{used:false,d:null,surf:0}}:{}),
+      ...(/VISIOCLIENT|PROJECT|POWER_BI/.test(r.skuPartNumber)?{app:{used:false,d:null,cov:34},install:{has:rnd()<.6,src:1,trust:true}}:{}),
+      ...(r.reasonCodes.includes('SERVICE_ACCOUNT')?{mbx:'shared'}:{}),
+      mfa:!r.reasonCodes.includes('NEVER_ACTIVE')});
+    if(i%9===0){r.humanDecision=pick(['keep','snooze','reclaim']);r.decidedBy='j.vermeer@contoso.com';
+      r.decidedUtc='2026-06-2'+Math.floor(rnd()*8);if(r.humanDecision==='snooze')r.snoozeUntilUtc='2026-09-01';r.snoozed=r.humanDecision==='snooze'?1:0;}
+  });
+  const changes=[
+    {changeKind:'ESCALATED',displayName:rows[3].displayName,skuName:rows[3].skuName,prevVerdict:'REVIEW',currVerdict:'RECLAIM',estMonthlySavings:rows[3].estMonthlySavings,userPrincipalName:rows[3].userPrincipalName},
+    {changeKind:'NEW',displayName:rows[7].displayName,skuName:rows[7].skuName,prevVerdict:null,currVerdict:rows[7].verdict,estMonthlySavings:rows[7].estMonthlySavings,userPrincipalName:rows[7].userPrincipalName},
+    {changeKind:'NEW',displayName:rows[11].displayName,skuName:rows[11].skuName,prevVerdict:null,currVerdict:rows[11].verdict,estMonthlySavings:rows[11].estMonthlySavings,userPrincipalName:rows[11].userPrincipalName},
+    {changeKind:'RELAXED',displayName:rows[5].displayName,skuName:rows[5].skuName,prevVerdict:'RECLAIM',currVerdict:'REVIEW',estMonthlySavings:rows[5].estMonthlySavings,userPrincipalName:rows[5].userPrincipalName},
+    {changeKind:'GONE',displayName:rows[9].displayName,skuName:rows[9].skuName,prevVerdict:'REVIEW',currVerdict:null,estMonthlySavings:null,userPrincipalName:rows[9].userPrincipalName}];
+  const health=[
+    {entity:'users',source:'m365.identity-license',hoursSinceOk:14,lastOkRows:2081,failedLoads7d:0},
+    {entity:'license-assignments',source:'m365.identity-license',hoursSinceOk:14,lastOkRows:5124,failedLoads7d:0},
+    {entity:'service-usage',source:'m365.service-usage',hoursSinceOk:14,lastOkRows:2010,failedLoads7d:0},
+    {entity:'m365-app-usage',source:'m365.app-usage',hoursSinceOk:14,lastOkRows:1988,failedLoads7d:0},
+    {entity:'copilot-usage',source:'m365.copilot-usage',hoursSinceOk:38,lastOkRows:150,failedLoads7d:1},
+    {entity:'devices',source:'intune.devices',hoursSinceOk:14,lastOkRows:1410,failedLoads7d:0},
+    {entity:'app-installs',source:'intune.devices',hoursSinceOk:62,lastOkRows:48210,failedLoads7d:0},
+    {entity:'software-runs',source:'mde.hunting',hoursSinceOk:14,lastOkRows:9204,failedLoads7d:0},
+    {entity:'mailbox-settings',source:'graph.mailboxsettings',hoursSinceOk:14,lastOkRows:2010,failedLoads7d:0},
+    {entity:'pstn-usage',source:'graph.pstn',hoursSinceOk:14,lastOkRows:311,failedLoads7d:0},
+    {entity:'app-usage',source:'agent.app-usage',hoursSinceOk:2,lastOkRows:3120,failedLoads7d:0}];
+  const decisionLog=rows.filter(r=>r.humanDecision).map(r=>({userId:r.userId,skuId:r.skuId,skuPartNumber:r.skuPartNumber,
+    decision:r.humanDecision,decidedBy:r.decidedBy,decidedUtc:r.decidedUtc,snoozeUntilUtc:r.snoozeUntilUtc||null,
+    note:r.humanDecision==='snooze'?'Manager confirms extended leave.':'Reviewed against project allocation.',
+    verdictAtTime:r.verdict,savingsAtTime:r.estMonthlySavings}));
+  return {summary,reviewQueue:rows,skus:util,unpriced,history,watchedApps,rightsize,overlap,renewals,reallocation,licenseUsage,devices,installs,
+    changes,health,decisionLog,isSample:true};
 }
 
 let DATA=null, TAB='overview', VIZ='waterfall', confThreshold=0;
-let qSort={key:'estMonthlySavings',dir:-1}, qSearch='', qVerdict='ALL', qConf='ALL', qDept='ALL', qRegion='ALL', qSku='ALL', qTier='ALL';
+let qSort={key:'estMonthlySavings',dir:-1}, qSearch='', qVerdict='ALL', qConf='ALL', qDept='ALL', qRegion='ALL', qSku='ALL', qTier='ALL', qHandled='OPEN';
 let DETAIL=null;        // {type, key} when viewing an entity profile
 let lastTab='overview'; // to support a Back action from detail views
 
@@ -735,7 +877,11 @@ async function load(){
       DATA.rightsize=g&&g.ok?await g.json():[];DATA.overlap=h&&h.ok?await h.json():[];DATA.renewals=i&&i.ok?await i.json():[];DATA.reallocation=j&&j.ok?await j.json():[];DATA.licenseUsage=k&&k.ok?await k.json():[];}catch(_){}
     try{const[da,ds]=await Promise.all([fetch('api/direct-assignments').catch(()=>null),fetch('api/direct-assignment-summary').catch(()=>null)]);
       DATA.directAssignments=da&&da.ok?await da.json():[];DATA.directSummary=ds&&ds.ok?await ds.json():[];}catch(_){}
+    // v2: run-over-run changes, connector freshness, decision audit log
+    try{const[ch,he,dl]=await Promise.all(['api/changes','api/health','api/decision-log'].map(u=>fetch(u).catch(()=>null)));
+      DATA.changes=ch&&ch.ok?await ch.json():[];DATA.health=he&&he.ok?await he.json():[];DATA.decisionLog=dl&&dl.ok?await dl.json():[];}catch(_){}
   }
+  DATA.changes=DATA.changes||[];DATA.health=DATA.health||[];DATA.decisionLog=DATA.decisionLog||[];
   document.getElementById('samplePill').classList.toggle('hidden', !DATA.isSample);
   boot();
 }
@@ -762,6 +908,7 @@ const NAV=[
   {id:'apps',label:'Applications',title:'Applications',icon:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'},
   {id:'licenses',label:'Licenses & Pricing',title:'Licenses & Pricing',icon:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>'},
   {id:'optimise',label:'Optimise',title:'Optimise',icon:'<path d="M3 17l6-6 4 4 8-8M21 7v5M21 7h-5"/>'},
+  {id:'health',label:'Data & Decisions',title:'Data & Decisions',icon:'<path d="M3 12h4l2.5-7 4 14 2.5-7h5"/>'},
 ];
 function renderNav(){
   document.getElementById('nav').innerHTML='<div class="navlabel">Workspace</div>'+NAV.map(n=>{
@@ -819,7 +966,7 @@ function renderPage(){
   const p=document.getElementById('page');
   p.innerHTML='';
   if(TAB==='detail'&&DETAIL){viewDetail(p);installSortables();countUp();return;}
-  ({overview:viewOverview,queue:viewQueue,apps:viewApps,licenses:viewLicenses,optimise:viewOptimise}[TAB]||viewOverview)(p);
+  ({overview:viewOverview,queue:viewQueue,apps:viewApps,licenses:viewLicenses,optimise:viewOptimise,health:viewHealth}[TAB]||viewOverview)(p);
   // post-render wiring
   installSortables();
   countUp();
@@ -840,7 +987,7 @@ function viewOverview(root){
   const wrap=document.createElement('div');
   wrap.className='reveal';
   wrap.innerHTML=`
-    <p class="lede" style="margin:2px 2px 18px">License waste and recoverable spend across the Microsoft&nbsp;365 estate &mdash; read-only intelligence from Microsoft telemetry. Prism recommends; <b>you decide</b>.</p>
+    <p class="lede" style="margin:2px 2px 18px">License waste and recoverable spend across the Microsoft&nbsp;365 estate - read-only intelligence from Microsoft telemetry. Prism recommends; <b>you decide</b>.</p>
     <div class="hero">
       <div class="left">
         <div class="biglabel"><span class="eyebrow">Recoverable spend / year</span></div>
@@ -877,7 +1024,7 @@ function viewOverview(root){
   root.appendChild(stats);
 
   // ACT II - concentration + signature viz
-  root.appendChild(sectionHead('Where the waste lives','The concentration story &mdash; switch between the financial waterfall and the department heatmap.',`
+  root.appendChild(sectionHead('Where the waste lives','The concentration story - switch between the financial waterfall and the department heatmap.',`
     <div class="vizswitch" id="vizswitch">
       <button data-v="waterfall" class="${VIZ==='waterfall'?'on':''}">${svg('<path d="M3 3v18h18"/><rect x="6" y="10" width="3" height="8"/><rect x="11" y="6" width="3" height="12"/><rect x="16" y="13" width="3" height="5"/>')}Waterfall</button>
       <button data-v="heatmap" class="${VIZ==='heatmap'?'on':''}">${svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>')}Heatmap</button>
@@ -894,7 +1041,7 @@ function viewOverview(root){
   renderInsightTiles();
 
   // ACT III - what to do
-  root.appendChild(sectionHead('What to do first','Highest-value, high-confidence seats &mdash; the fastest path to recovered spend.',`<span class="act" onclick="go('queue')">Open Review Queue ${svg('<path d="M5 12h14M13 6l6 6-6 6"/>')}</span>`));
+  root.appendChild(sectionHead('What to do first','Highest-value, high-confidence seats - the fastest path to recovered spend.',`<span class="act" onclick="go('queue')">Open Review Queue ${svg('<path d="M5 12h14M13 6l6 6-6 6"/>')}</span>`));
   const act3=document.createElement('div');act3.className='g12';
   act3.innerHTML=`
     <div class="card"><div class="ch"><h3>Quick wins</h3><div class="sub">Ranked by confidence, then value. Click to inspect the case.</div></div><div class="cb"><div class="qw" id="quickwins"></div></div></div>
@@ -907,6 +1054,16 @@ function viewOverview(root){
   const gov=document.createElement('div');gov.className='card reveal';gov.innerHTML='<div class="cb"><div id="directAssign"></div></div>';
   root.appendChild(gov);
   renderDirectAssignments();
+
+  // v2 - movement & data trust: what changed since the previous run, and how fresh the inputs are
+  root.appendChild(sectionHead('Since the last run','Verdicts that moved - the queue is alive, not a static report. Freshness on the right: a verdict is only as good as its inputs.',`<span class="act" onclick="go('health')">Data & Decisions ${svg('<path d="M5 12h14M13 6l6 6-6 6"/>')}</span>`));
+  const mv=document.createElement('div');mv.className='g12 reveal';
+  mv.innerHTML=`
+    <div class="card"><div class="ch"><h3>What changed</h3><div class="sub">New arrivals, escalations and relaxations vs the previous scoring run.</div></div><div class="cb" id="changesBox"></div></div>
+    <div class="card"><div class="ch"><h3>Signal freshness</h3><div class="sub">Latest successful pull per connector feed.</div></div><div class="cb" id="freshBox"></div></div>`;
+  root.appendChild(mv);
+  renderChanges(document.getElementById('changesBox'),6);
+  renderFreshness(document.getElementById('freshBox'),6);
 
   // trend + ACT IV proof
   root.appendChild(sectionHead('Trajectory & assurance','Identified recoverable spend over time, and the governance that keeps Prism safe.'));
@@ -979,7 +1136,7 @@ function wireWhatIf(){
 function renderViz(){
   const c=document.getElementById('vizCard');if(!c)return;
   if(VIZ==='waterfall'){
-    c.innerHTML=`<div class="ch"><h3>Recoverable spend &mdash; how the opportunity builds up</h3>
+    c.innerHTML=`<div class="ch"><h3>Recoverable spend - how the opportunity builds up</h3>
       <div class="sub">Monthly figures. Reclaimable and reviewable seats build the recoverable headline; idle (budgeted) seats add the full ceiling.</div></div>
       <div class="wflegend">
         <span class="l"><span class="sw" style="background:var(--danger)"></span>Reclaimable</span>
@@ -990,7 +1147,7 @@ function renderViz(){
       <div class="wfwrap"><svg class="wf" id="wfsvg"></svg></div>`;
     drawWaterfall();
   }else{
-    c.innerHTML=`<div class="ch"><h3>Recoverable spend &mdash; department × license tier</h3>
+    c.innerHTML=`<div class="ch"><h3>Recoverable spend - department × license tier</h3>
       <div class="sub">Where flagged value concentrates. Darker = more recoverable €/mo. Click a cell to drill into the queue.</div></div>
       <div class="hmscale"><span>Less</span><span class="grad"></span><span>More</span><span style="margin-left:auto;color:var(--faint)">€/mo recoverable, monthly</span></div>
       <div class="hmwrap" id="hmwrap"></div>`;
@@ -1118,9 +1275,9 @@ function renderInsightTiles(){
   const tile=(icon,label,big,desc,onclick)=>`<div class="itile${onclick?' click':''}" ${onclick?`onclick="${onclick}"`:''}>
     <div class="ih">${svg(icon)}<span class="t">${label}</span></div><div class="big">${big}</div><div class="desc">${desc}</div></div>`;
   el.innerHTML=
-    tile('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>','Concentration',`${n80} <small>SKUs</small>`,`drive <b>80%</b> of recoverable spend &mdash; focus here first`,`drill({})`)
+    tile('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>','Concentration',`${n80} <small>SKUs</small>`,`drive <b>80%</b> of recoverable spend - focus here first`,`drill({})`)
    +tile('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>','Avg. age of waste',avgIdle==null?'&ndash;':`${avgIdle} <small>days</small>`,avgIdle==null?'idle data lands with agent telemetry':`reclaim seats have been idle this long on average`,`drill({verdict:'RECLAIM'})`)
-   +tile('<path d="M20 7L9 18l-5-5"/>','Cleanup wins',`${ghosts} <small>seats</small>`,`on <b>disabled or offboarded</b> accounts &mdash; safe, immediate reclaim`,`drill({verdict:'RECLAIM',search:'account'})`)
+   +tile('<path d="M20 7L9 18l-5-5"/>','Cleanup wins',`${ghosts} <small>seats</small>`,`on <b>disabled or offboarded</b> accounts - safe, immediate reclaim`,`drill({verdict:'RECLAIM',search:'account'})`)
    +tile('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>','Top app vendor',topVendor?esc(topVendor[0]):'&ndash;',topVendor?`<b>${eur(topVendor[1])}/yr</b> committed application exposure`:'app data pending',topVendor?`detail('vendor',${escq(JSON.stringify(topVendor[0]))})`:`go('apps')`);
 }
 
@@ -1198,9 +1355,9 @@ function renderTrend(){
 function renderAssurance(){
   const el=document.getElementById('assurance');if(!el)return;
   const items=[
-    ['Read-only by design','Prism reads Microsoft telemetry. It never assigns, removes, or changes a license &mdash; every action stays a human decision.'],
+    ['Read-only by design','Prism reads Microsoft telemetry. It never assigns, removes, or changes a license - every action stays a human decision.'],
     ['Every verdict is explainable','Each flag carries reason codes grounded in 30/60/90-day SAM/FinOps reclamation practice.'],
-    ['Conservative by default','Open (unassigned) seats are excluded from headline savings &mdash; budgeted at renewal, not double-counted.'],
+    ['Conservative by default','Open (unassigned) seats are excluded from headline savings - budgeted at renewal, not double-counted.'],
   ];
   el.innerHTML=items.map(([t,d])=>`<div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-soft)">
     <span style="width:26px;height:26px;border-radius:8px;background:var(--green-soft);display:grid;place-items:center;flex:none">
@@ -1313,6 +1470,7 @@ function filterControls(){
     <select class="input" id="qDept"><option value="ALL">All departments</option>${depts.map(d=>`<option ${qDept===d?'selected':''}>${esc(d)}</option>`).join('')}</select>
     <select class="input" id="qRegion"><option value="ALL">All regions</option>${regions.map(r=>`<option ${qRegion===r?'selected':''}>${esc(r)}</option>`).join('')}</select>
     <select class="input" id="qConf"><option value="ALL">Any confidence</option><option value="HIGH" ${qConf==='HIGH'?'selected':''}>High only</option><option value="MEDIUM" ${qConf==='MEDIUM'?'selected':''}>Medium+</option></select>
+    <select class="input" id="qHandled"><option value="OPEN" ${qHandled==='OPEN'?'selected':''}>Open items</option><option value="HANDLED" ${qHandled==='HANDLED'?'selected':''}>Handled only</option><option value="ALL" ${qHandled==='ALL'?'selected':''}>Everything</option></select>
     <div class="grow"></div>
     <button class="btn" id="exportBtn">${svg('<path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/>')}Export</button>
   </div>`;
@@ -1324,15 +1482,26 @@ function wireFilters(){
   const dd=document.getElementById('qDept');if(dd)dd.onchange=()=>{qDept=dd.value;renderPage();};
   const rr=document.getElementById('qRegion');if(rr)rr.onchange=()=>{qRegion=rr.value;renderPage();};
   const cc=document.getElementById('qConf');if(cc)cc.onchange=()=>{qConf=cc.value;renderPage();};
+  const hh=document.getElementById('qHandled');if(hh)hh.onchange=()=>{qHandled=hh.value;renderPage();};
   const ex=document.getElementById('exportBtn');if(ex)ex.onclick=exportQueue;
 }
 
 /* ════════════════════════════════════════════════════════════════════════
    Review Queue
    ════════════════════════════════════════════════════════════════════════ */
+/* v2: a seat is "handled" when a human decision stands (a snooze counts only while
+   its date is in the future - expired snoozes resurface automatically). */
+function isHandled(r){
+  if(!r.humanDecision)return false;
+  if(r.humanDecision==='snooze')
+    return !r.snoozeUntilUtc || new Date(r.snoozeUntilUtc)>new Date();
+  return true;
+}
 function queueFiltered(){
   const rk={LOW:0,MEDIUM:1,HIGH:2};
   return flagged().filter(r=>{
+    if(qHandled==='OPEN'&&isHandled(r))return false;
+    if(qHandled==='HANDLED'&&!isHandled(r))return false;
     if(qVerdict!=='ALL'&&r.verdict!==qVerdict)return false;
     if(qDept!=='ALL'&&r.department!==qDept)return false;
     if(qRegion!=='ALL'&&r.country!==qRegion)return false;
@@ -1361,26 +1530,41 @@ function activeFilterBar(){
     <button class="fclear" onclick="resetQueueFilters();renderPage()">Clear all</button></div>`;
 }
 function viewQueue(root){
-  bladeHead(root,'Review Queue','Every flagged license assignment, ranked by recoverable value. Click any user, license or region to drill in. Prism never changes a license itself.');
+  bladeHead(root,'Review Queue','Every flagged license assignment, ranked by recoverable value. Open the <b>evidence</b> behind any verdict, then record <b>your</b> decision - keep, snooze, or reclaim. Prism never changes a license itself.');
   const rows=sortRows(queueFiltered());
+  const QI=r=>escq(JSON.stringify(r.userId+'|'+r.skuId));
   const cols=[
     {label:'User',sort:'displayName',render:r=>`<div class="cellmain linklike" onclick="event.stopPropagation();detail('user',${escq(JSON.stringify(r.displayName))})">${esc(r.displayName)}</div><div class="cellsub">${esc(r.userPrincipalName)}</div>`},
     {label:'License',sort:'skuName',render:r=>`<span class="linklike" onclick="event.stopPropagation();detail('sku',${escq(JSON.stringify(r.skuName))})">${esc(r.skuName)}</span>`},
-    {label:'Region',sort:'country',render:r=>`<span class="chip neutral clickchip" onclick="event.stopPropagation();detail('country',${escq(JSON.stringify(r.country))})">${esc(r.country)}</span>`},
     {label:'Verdict',sort:'verdict',render:r=>`<span onclick="event.stopPropagation();drill({verdict:'${r.verdict}'})" style="cursor:pointer">${verdictChip(r.verdict)}</span>`},
     {label:'Score',sort:'wasteScore',render:r=>scoreMeter(r.wasteScore)},
-    {label:'Confidence',sort:'confidence',render:r=>`<span class="linklike" style="font-size:12px;font-weight:600" onclick="event.stopPropagation();drill({conf:'${r.confidence}'})">${esc(r.confidence)}</span>`},
+    {label:'Confidence',sort:'confidence',render:r=>`<span class="linklike" style="font-size:12px;font-weight:600" onclick="event.stopPropagation();drill({conf:'${r.confidence}'})">${esc(r.confidence)}</span>
+      ${r.signalCount?`<div class="cellsub" title="Independent data sources consulted for this seat">${r.signalCount} signals</div>`:''}`},
     {label:'Reasons',render:r=>reasonTags(r.reasonCodes)},
     {label:'Idle days',sort:'effectiveInactiveDays',num:true,render:r=>r.effectiveInactiveDays!=null?r.effectiveInactiveDays:'<span style="color:var(--faint)">-</span>'},
     {label:'Monthly',sort:'estMonthlySavings',num:true,render:r=>`<b>${eur(r.estMonthlySavings)}</b>`},
+    {label:'Decide',render:r=>{
+      if(isHandled(r)){
+        const until=r.humanDecision==='snooze'&&r.snoozeUntilUtc?` · until ${String(r.snoozeUntilUtc).slice(0,10)}`:'';
+        return `<span class="decided-chip ${r.humanDecision}" onclick="event.stopPropagation();openEvidence(${QI(r)})" title="Decided by ${escq(r.decidedBy||'?')}${until}. Click for the case file.">${esc(r.humanDecision)}${until?' ⏱':''}</span>`;}
+      return `<div class="acts" onclick="event.stopPropagation()">
+        <button class="act-btn ev" title="Evidence - why Prism thinks this" onclick="openEvidence(${QI(r)})"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <button class="act-btn keep" title="Keep - the seat stays" onclick="openDecision(${QI(r)},'keep')"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></button>
+        <button class="act-btn snooze" title="Snooze - revisit later" onclick="openDecision(${QI(r)},'snooze')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
+        <button class="act-btn reclaim" title="Approve reclaim - goes to your change process" onclick="openDecision(${QI(r)},'reclaim')"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></svg></button>
+      </div>`;}},
   ];
-  rows.forEach(r=>r.__click=`detail('user',${escq(JSON.stringify(r.displayName))})`);
+  rows.forEach(r=>{r.__click=`openEvidence(${QI(r)})`;});
+  const handled=flagged().filter(isHandled).length;
   const card=document.createElement('div');card.className='card tablecard reveal';card.style.animationDelay='.05s';
   card.innerHTML=filterControls()+activeFilterBar()+dataTable(cols,rows,{empty:'No assignments match these filters.'})+
-    `<div class="tfoot"><span>${rows.length} of ${flagged().length} flagged shown</span><span>Filtered recoverable: <b>${eur(sumSav(rows))}/mo</b></span></div>`;
+    `<div class="tfoot"><span>${rows.length} of ${flagged().length} flagged shown · ${handled} handled</span><span>Filtered recoverable: <b>${eur(sumSav(rows))}/mo</b></span></div>`;
   root.appendChild(card);
+  // decided rows render dimmed so open work stands out
+  card.querySelectorAll('tbody tr').forEach((tr,i)=>{if(rows[i]&&isHandled(rows[i]))tr.classList.add('handled');});
   wireFilters();
 }
+function queueRow(key){const [u,s]=String(key).split('|');return (DATA.reviewQueue||[]).find(r=>r.userId===u&&r.skuId===s);}
 function exportQueue(){
   const rows=sortRows(queueFiltered());
   const head=['User','UPN','License','Region','Verdict','Score','Confidence','Reasons','IdleDays','MonthlyEUR'];
@@ -1394,7 +1578,7 @@ function exportQueue(){
    APPLICATIONS
    ════════════════════════════════════════════════════════════════════════ */
 function viewApps(root){
-  bladeHead(root,'Applications','Every application installed across the estate, paid or not &mdash; priced where a watched-app pattern matches, otherwise shown for visibility only. Annual exposure = unit price × installs.');
+  bladeHead(root,'Applications','Every application installed across the estate, paid or not - priced where a watched-app pattern matches, otherwise shown for visibility only. Annual exposure = unit price × installs.');
   const apps=DATA.watchedApps||[];
   const priced=apps.filter(a=>a.annualExposure>0);
   const totalExp=priced.reduce((t,a)=>t+a.annualExposure,0);
@@ -1951,6 +2135,211 @@ function detailCountry(root,country){
 }
 
 /* ════════════════════════════════════════════════════════════════════════
+   v2 - EVIDENCE DRAWER: the case file behind one verdict.
+   Renders the engine's EvidenceJson (per-signal day-deltas/flags), the reason
+   codes, the verdict history, and the standing human decision. PRESENT vs
+   ABSENT is deliberate: a signal that reported "no use" is evidence; a signal
+   that never reported is only a gap - the drawer never conflates the two.
+   ════════════════════════════════════════════════════════════════════════ */
+let EV_ROW=null;
+function openEvidence(key){
+  const r=queueRow(key);if(!r)return;
+  EV_ROW=r;
+  document.getElementById('evTitle').textContent=r.displayName+' · '+r.skuName;
+  document.getElementById('evSub').innerHTML=`${esc(r.userPrincipalName)} &middot; ${verdictChip(r.verdict)} score ${r.wasteScore} &middot; ${esc(r.confidence)} confidence${r.signalCount?` &middot; ${r.signalCount} signals`:''}`;
+  document.getElementById('evScrim').classList.add('show');
+  document.getElementById('evsheet').classList.add('show');
+  renderEvidenceBody(r);
+  if(DATA&&!DATA.isSample)hydrateEvidence(r);   // fetch verdict history + latest decision live
+}
+function closeEvidence(){document.getElementById('evScrim').classList.remove('show');document.getElementById('evsheet').classList.remove('show');EV_ROW=null;}
+document.getElementById('evScrim').onclick=closeEvidence;
+
+const SIG_META={ // key → [title, describe(value)] - mirrors ScoringEngine.BuildEvidence
+  signin :['Entra sign-ins', v=>[v.i==null&&v.ni==null?null:true,
+            `interactive ${dOr(v.i)} · silent ${dOr(v.ni)} · last success ${dOr(v.ok)}`]],
+  m365   :['M365 workloads', v=>[v.any!=null,`any ${dOr(v.any)} · Teams ${dOr(v.teams)} · mail ${dOr(v.mail)} · OneDrive ${dOr(v.od)} · SharePoint ${dOr(v.sp)}`]],
+  app    :['Desktop agent', v=>[v.used,`${v.used?'ran '+dOr(v.d):'never ran'} · ${v.cov??0} coverage days`]],
+  install:['Install inventory', v=>[v.has,`${v.has?'installed':'NOT installed'} · ${v.src||0} source(s) · absence ${v.trust?'trustworthy':'not conclusive'}`]],
+  mde    :['Defender hunting', v=>[v.ran,v.ran?`exe started ${dOr(v.d)}`:'zero launches in 30d']],
+  web    :['Service sign-ins', v=>[v.in,v.in?`signed in ${dOr(v.d)}`:'no sign-ins to the SKU’s service']],
+  copilot:['Copilot report', v=>[v.used,v.used?`active ${dOr(v.d)} · ${v.surf||0} host app(s)`:'report present · zero Copilot activity']],
+  phone  :['Teams activity', v=>[v.calls>0,`${v.calls} call(s) · ${v.meet||0} meeting(s) in window`]],
+  pstn   :['PSTN call log', v=>[v.calls>0,v.calls>0?`${v.calls} real call(s), last ${dOr(v.d)}`:'zero PSTN calls - hard evidence']],
+  mbx    :['Mailbox purpose', v=>[v==='user',`userPurpose = ${v}${v!=='user'?' - convert, don’t cut':''}`]],
+  oof    :['Auto-reply', v=>[null,`${v} - possible leave of absence; reclaim blocked`]],
+  mfa    :['MFA registration', v=>[v===true,v===true?'registered':'NEVER registered - likely never onboarded']],
+  guest  :['Guest account', ()=>[false,'paid SKU on a guest - governance review']],
+  plansOff:['Disabled plans', v=>[null,`${v} service plan(s) turned off`]],
+};
+function dOr(v){return v==null?'-':v+'d ago';}
+function renderEvidenceBody(r){
+  const body=document.getElementById('evBody');
+  let ev=null;try{ev=r.evidenceJson?JSON.parse(r.evidenceJson):null;}catch(_){}
+  let sigHtml='';const present=new Set();
+  if(ev)for(const [k,v] of Object.entries(ev)){
+    const m=SIG_META[k];if(!m)continue;present.add(k);
+    const [good,text]=m[1](v);
+    const tone=good===true?'pos':good===false?'neg':'mut';
+    sigHtml+=`<div class="sig ${tone}"><div class="sn"><span class="sdot"></span>${esc(m[0])}</div><div class="sd">${esc(text)}</div></div>`;
+  }
+  const absent=['signin','m365','app','install','mde','web'].filter(k=>!present.has(k));
+  body.innerHTML=`
+    <div>
+      <div class="eyebrow" style="margin-bottom:10px">Signals consulted - present and speaking</div>
+      ${sigHtml?`<div class="sigs">${sigHtml}</div>`:`<div class="sigabsent">No structured evidence stored for this seat yet (pre-v2 scoring run). The reason codes below still explain the verdict; re-run scoring to populate the full trail.</div>`}
+      ${absent.length?`<div class="sigabsent" style="margin-top:10px">Silent (no data, <b>never counted as evidence</b>): ${absent.map(k=>`<code>${esc((SIG_META[k]||[k])[0])}</code>`).join(' ')}</div>`:''}
+    </div>
+    <div><div class="eyebrow" style="margin-bottom:10px">Reason codes</div>${reasonTags(r.reasonCodes)}</div>
+    <div id="evHistWrap"></div>
+    <div id="evDecision">${evidenceDecisionBlock(r)}</div>`;
+  if(DATA.isSample)renderEvidenceHistory(sampleHistoryFor(r));
+}
+function evidenceDecisionBlock(r){
+  const QI=escq(JSON.stringify(r.userId+'|'+r.skuId));
+  if(isHandled(r)){
+    const until=r.humanDecision==='snooze'&&r.snoozeUntilUtc?` until <b>${String(r.snoozeUntilUtc).slice(0,10)}</b>`:'';
+    return `<div class="decision-note">Standing decision: <span class="decided-chip ${r.humanDecision}" style="cursor:default">${esc(r.humanDecision)}</span>${until}
+      by <b>${esc(r.decidedBy||'?')}</b> on ${esc(String(r.decidedUtc||'').slice(0,10))}${r.decisionNote?`<br>&ldquo;${esc(r.decisionNote)}&rdquo;`:''}
+      <div style="margin-top:10px"><button class="btn" onclick="openDecision(${QI},'keep')">Change decision</button></div></div>`;
+  }
+  return `<div class="decision-note"><b>Your call.</b> Prism only surfaces and explains - nothing happens until you decide, and approved reclaims still go through your normal change process.
+    <div style="display:flex;gap:9px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn" style="color:var(--keep);border-color:var(--keep-soft)" onclick="openDecision(${QI},'keep')">${svg('<path d="M20 6L9 17l-5-5"/>')}Keep</button>
+      <button class="btn" style="color:var(--review);border-color:var(--review-soft)" onclick="openDecision(${QI},'snooze')">${svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}Snooze</button>
+      <button class="btn" style="color:var(--danger);border-color:var(--danger-soft)" onclick="openDecision(${QI},'reclaim')">${svg('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>')}Approve reclaim</button>
+    </div></div>`;
+}
+function sampleHistoryFor(r){
+  const runs=['Feb','Mar','Apr','May','Jun','Jul'];
+  return runs.map((m,i)=>({runId:m,scoredUtc:m,verdict:i<2?'KEEP':i<4?'REVIEW':r.verdict,wasteScore:Math.min(99,20+i*15)}));
+}
+async function hydrateEvidence(r){
+  try{
+    const resp=await fetch(`api/evidence?user=${encodeURIComponent(r.userId)}&sku=${encodeURIComponent(r.skuId)}`);
+    if(!resp.ok)return;const d=await resp.json();
+    if(!EV_ROW||EV_ROW.userId!==r.userId||EV_ROW.skuId!==r.skuId)return;
+    if(d.history&&d.history.length)renderEvidenceHistory(d.history.slice().reverse());
+    if(d.verdict){ // refresh decision block with authoritative state
+      r.humanDecision=d.verdict.humanDecision;r.decidedBy=d.verdict.decidedBy;r.decidedUtc=d.verdict.decidedUtc;
+      r.snoozeUntilUtc=d.verdict.snoozeUntilUtc;r.decisionNote=d.verdict.decisionNote;
+      const el=document.getElementById('evDecision');if(el)el.innerHTML=evidenceDecisionBlock(r);
+    }
+  }catch(_){}
+}
+function renderEvidenceHistory(hist){
+  const w=document.getElementById('evHistWrap');if(!w||!hist||!hist.length)return;
+  w.innerHTML=`<div class="eyebrow" style="margin-bottom:10px">Verdict history - ${hist.length} run(s)</div>
+    <div class="evhist">${hist.map(h=>`<div class="hb ${esc(h.verdict||'KEEP')}" style="height:${Math.max(8,(h.wasteScore||10))}%" title="${esc(String(h.scoredUtc||h.runId).slice(0,10))}: ${esc(h.verdict||'?')} · score ${h.wasteScore??'-'}"></div>`).join('')}</div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--faint);font-family:var(--f-num)"><span>${esc(String(hist[0].scoredUtc||'').slice(0,10))}</span><span>latest</span></div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   v2 - DECISION MODAL: keep / snooze / reclaim + rationale → POST /api/decision
+   ════════════════════════════════════════════════════════════════════════ */
+let DEC={key:null,kind:null};
+function openDecision(key,kind){
+  const r=queueRow(key);if(!r)return;
+  DEC={key,kind};
+  const t={keep:'Keep this seat',snooze:'Snooze this seat',reclaim:'Approve reclaim'}[kind];
+  document.getElementById('decTitle').textContent=t;
+  document.getElementById('decSub').innerHTML=`${esc(r.displayName)} &middot; ${esc(r.skuName)} &middot; ${eur(r.estMonthlySavings)}/mo at stake.
+    ${kind==='reclaim'?'<b>Nothing is removed automatically</b> - this records your approval for the normal change process.':''}`;
+  const sw=document.getElementById('decSnoozeWrap');sw.style.display=kind==='snooze'?'block':'none';
+  if(kind==='snooze'){const d=new Date();d.setDate(d.getDate()+90);document.getElementById('decSnooze').value=d.toISOString().slice(0,10);}
+  document.getElementById('decNote').value=r.decisionNote||'';
+  document.getElementById('decDlg').classList.add('show');
+  document.getElementById('evScrim').classList.add('show');
+  setTimeout(()=>document.getElementById('decNote').focus(),120);
+}
+function closeDecision(){document.getElementById('decDlg').classList.remove('show');
+  if(!document.getElementById('evsheet').classList.contains('show'))document.getElementById('evScrim').classList.remove('show');
+  DEC={key:null,kind:null};}
+async function submitDecision(){
+  const r=queueRow(DEC.key);if(!r)return;
+  const kind=DEC.kind,note=document.getElementById('decNote').value.trim()||null;
+  const snooze=kind==='snooze'?document.getElementById('decSnooze').value||null:null;
+  const btn=document.getElementById('decGo');btn.disabled=true;btn.textContent='Recording…';
+  let ok=true;
+  if(DATA&&!DATA.isSample){
+    try{const resp=await fetch('api/decision',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({userId:r.userId,skuId:r.skuId,skuPartNumber:r.skuPartNumber,decision:kind,
+        runId:DATA.summary&&DATA.summary.runId,note,snoozeUntil:snooze?snooze+'T00:00:00Z':null})});
+      ok=resp.ok;}catch(_){ok=false;}
+  }
+  btn.disabled=false;btn.textContent='Record decision';
+  if(!ok){toast('Could not record the decision - check the API.');return;}
+  r.humanDecision=kind;r.decidedBy='you';r.decidedUtc=new Date().toISOString();
+  r.snoozeUntilUtc=snooze;r.decisionNote=note;r.snoozed=kind==='snooze'?1:0;
+  (DATA.decisionLog=DATA.decisionLog||[]).unshift({userId:r.userId,skuId:r.skuId,skuPartNumber:r.skuPartNumber,
+    decision:kind,decidedBy:'you',decidedUtc:r.decidedUtc,snoozeUntilUtc:snooze,note,verdictAtTime:r.verdict,savingsAtTime:r.estMonthlySavings});
+  closeDecision();closeEvidence();
+  toast({keep:'Kept - recorded in the audit log.',snooze:`Snoozed${snooze?' until '+snooze:''} - it will resurface.`,reclaim:'Reclaim approved - route it through your change process.'}[kind]);
+  renderPage();
+}
+function toast(msg){const t=document.getElementById('toastbox');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),3200);}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDecision();closeEvidence();}});
+
+/* ════════════════════════════════════════════════════════════════════════
+   v2 - WHAT CHANGED + FRESHNESS renderers (overview) & DATA & DECISIONS view
+   ════════════════════════════════════════════════════════════════════════ */
+function renderChanges(el,limit){
+  if(!el)return;const ch=(DATA.changes||[]).slice(0,limit||50);
+  if(!ch.length){el.innerHTML='<div class="empty">No verdict movement yet - appears from the second scoring run (schema v2).</div>';return;}
+  el.innerHTML=ch.map(c=>`<div class="chg">
+    <span class="ck ${esc(c.changeKind)}">${esc(c.changeKind)}</span>
+    <div style="min-width:0"><span class="linklike" onclick="detail('user',${escq(JSON.stringify(c.displayName||c.userPrincipalName||c.userId))})" style="font-weight:600">${esc(c.displayName||c.userPrincipalName||c.userId)}</span>
+      <span style="color:var(--dim)"> · ${esc(c.skuName||c.skuPartNumber||'')}</span>
+      <div class="cellsub">${c.prevVerdict?esc(c.prevVerdict):'-'} → ${c.currVerdict?esc(c.currVerdict):'left the queue'}</div></div>
+    <span class="hbv">${c.estMonthlySavings!=null?eur(c.estMonthlySavings)+'/mo':''}</span></div>`).join('');
+}
+function freshTone(h){return h==null?'bad':h<=30?'ok':h<=78?'warn':'bad';}
+function renderFreshness(el,limit){
+  if(!el)return;const rows=(DATA.health||[]).slice(0,limit||99);
+  if(!rows.length){el.innerHTML='<div class="empty">No load telemetry yet - meta.LoadRun fills as connectors run.</div>';return;}
+  el.innerHTML=rows.map(h=>`<div class="fresh">
+    <span class="fd ${freshTone(h.hoursSinceOk)}"></span>
+    <div style="min-width:0"><span class="fe">${esc(h.entity)}</span><div class="cellsub">${esc(h.source||'')}</div></div>
+    <span class="fm">${h.lastOkRows!=null?Number(h.lastOkRows).toLocaleString('en-US')+' rows':''}</span>
+    <span class="fm">${h.hoursSinceOk==null?'never':h.hoursSinceOk<=1?'just now':h.hoursSinceOk+'h ago'}${h.failedLoads7d?` · <b style="color:var(--danger)">${h.failedLoads7d} fail</b>`:''}</span></div>`).join('');
+}
+function viewHealth(root){
+  bladeHead(root,'Data &amp; Decisions','Two ledgers that keep Prism honest: how fresh every input signal is, and every decision a human has recorded. Verdicts inherit the quality of their inputs; decisions are the audit trail.');
+  const stale=(DATA.health||[]).filter(h=>freshTone(h.hoursSinceOk)!=='ok').length;
+  const stats=document.createElement('div');stats.className='stats reveal';
+  const dl=DATA.decisionLog||[];
+  const approved=dl.filter(d=>d.decision==='reclaim');
+  stats.innerHTML=[
+    `<div class="stat"><div class="top"><span class="lbl">Signal feeds</span></div><div class="v tnum">${(DATA.health||[]).length}</div><div class="foot">${stale?stale+' stale / failing':'all fresh'}</div></div>`,
+    `<div class="stat"><div class="top"><span class="lbl">Decisions recorded</span></div><div class="v tnum">${dl.length}</div><div class="foot">latest ${dl[0]?String(dl[0].decidedUtc).slice(0,10):'-'}</div></div>`,
+    `<div class="stat"><div class="top"><span class="lbl">Reclaims approved</span></div><div class="v tnum">${approved.length}</div><div class="foot">${eur(approved.reduce((t,d)=>t+(d.savingsAtTime||0),0))}/mo actioned</div></div>`,
+    `<div class="stat"><div class="top"><span class="lbl">Exports</span></div><div class="v" style="font-size:15px;display:flex;flex-direction:column;gap:7px;margin-top:8px">
+       <a class="linklike" href="api/export/review.csv">Review queue CSV</a><a class="linklike" href="api/export/decisions.csv">Decision log CSV</a></div></div>`,
+  ].join('');
+  root.appendChild(stats);
+  root.appendChild(sectionHead('Signal freshness','Latest successful load per feed (meta.LoadRun, 7-day window). Anything stale weakens the verdicts that depend on it.'));
+  const fc=document.createElement('div');fc.className='card reveal';fc.innerHTML='<div class="cb" id="freshFull"></div>';
+  root.appendChild(fc);renderFreshness(document.getElementById('freshFull'),99);
+  root.appendChild(sectionHead('What changed since the previous run','Escalations first - these earned their place at the top of the queue.'));
+  const cc=document.createElement('div');cc.className='card reveal';cc.innerHTML='<div class="cb" id="changesFull"></div>';
+  root.appendChild(cc);renderChanges(document.getElementById('changesFull'),50);
+  root.appendChild(sectionHead('Decision log','Append-only. Every call a human made, with the verdict they saw at the time - the artifact you hand to audit.'));
+  const dcols=[
+    {label:'When',render:d=>`<span class="tnum" style="font-family:var(--f-num);font-size:12px">${esc(String(d.decidedUtc||'').slice(0,10))}</span>`},
+    {label:'Decision',render:d=>`<span class="decided-chip ${esc(d.decision)}" style="cursor:default">${esc(d.decision)}</span>${d.snoozeUntilUtc?`<div class="cellsub">until ${esc(String(d.snoozeUntilUtc).slice(0,10))}</div>`:''}`},
+    {label:'Seat',render:d=>`<div class="cellmain">${esc(d.userId)}</div><div class="cellsub">${esc(d.skuPartNumber||d.skuId)}</div>`},
+    {label:'Verdict at time',render:d=>d.verdictAtTime?verdictChip(d.verdictAtTime):'-'},
+    {label:'By',render:d=>esc(d.decidedBy||'-')},
+    {label:'Note',render:d=>d.note?`<span style="font-size:12px;color:var(--muted)">${esc(d.note)}</span>`:'<span style="color:var(--faint)">-</span>'},
+    {label:'€/mo',num:true,render:d=>d.savingsAtTime!=null?eur(d.savingsAtTime):'-'},
+  ];
+  const dcard=document.createElement('div');dcard.className='card tablecard reveal';
+  dcard.innerHTML=dataTable(dcols,dl,{empty:'No decisions recorded yet - they appear as reviewers action the queue.'});
+  root.appendChild(dcard);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
    BOOT
    ════════════════════════════════════════════════════════════════════════ */
 function boot(){renderNav();renderPage();}
@@ -1972,6 +2361,7 @@ function cmdkBase(){
     {k:'View',label:'Applications',meta:'',run:()=>go('apps')},
     {k:'View',label:'Licenses & Pricing',meta:'',run:()=>go('licenses')},
     {k:'View',label:'Optimise',meta:'',run:()=>go('optimise')},
+    {k:'View',label:'Data & Decisions',meta:'freshness · audit log',run:()=>go('health')},
   ];
   (DATA.skus||[]).forEach(s=>it.push({k:'License',label:s.skuName,meta:s.skuPartNumber,run:()=>detail('sku',s.skuPartNumber)}));
   (DATA.watchedApps||[]).forEach(a=>it.push({k:'App',label:a.name,meta:a.vendor||'',run:()=>detail('app',a.name)}));

@@ -1,5 +1,5 @@
 // =============================================================================
-// apps/container-job.bicep  —  Prism (AppID 0001) reusable Container Apps Job
+// apps/container-job.bicep  -  Prism (AppID 0001) reusable Container Apps Job
 // -----------------------------------------------------------------------------
 // Phase 2 building block for the two scheduled (cron) Prism workloads:
 //   * prism-connectors (Microsoft Graph / Intune / Defender / Entra / Cost ETL

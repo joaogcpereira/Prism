@@ -1,5 +1,5 @@
 // =============================================================================
-// apps/container-app.bicep  —  Prism (AppID 0001) reusable Container App module
+// apps/container-app.bicep  -  Prism (AppID 0001) reusable Container App module
 // -----------------------------------------------------------------------------
 // Phase 2 building block for the two HTTP-ingress Prism services:
 //   * prism-gateway   (device-agent mTLS ingestion endpoint, port 8080)
@@ -9,10 +9,10 @@
 //   * The app is deployed INTO the existing internal, VNet-injected Container
 //     Apps environment created in Phase 1 (container-env.bicep). Because that
 //     environment uses an INTERNAL load balancer, `ingress.external = true`
-//     publishes the app on the environment's PRIVATE VNet IP only — it is NOT
+//     publishes the app on the environment's PRIVATE VNet IP only - it is NOT
 //     reachable from the public internet. There is no public ingress IP.
 //   * Images are pulled from the Phase 1 Premium ACR (public access Disabled)
-//     using the shared user-assigned managed identity — no admin user, no
+//     using the shared user-assigned managed identity - no admin user, no
 //     registry credentials/secrets.
 //   * SQL is reached over the Phase 1 Private Endpoint using the same managed
 //     identity (secret-free Entra auth); no SQL password ever exists.

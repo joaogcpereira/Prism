@@ -1,11 +1,11 @@
 // ============================================================
 //  CaTrust.cs  (Prism.Gateway)
-//  Resolves the client-cert TRUST ANCHOR(S) — the SCEP issuing/root CA public
+//  Resolves the client-cert TRUST ANCHOR(S) - the SCEP issuing/root CA public
 //  certificate(s) that every device certificate must chain to.
 //
 //  Production reads the CA from AZURE KEY VAULT using the container's user-assigned
 //  managed identity. The CA is a PUBLIC certificate (no private key), so it is
-//  stored as a Key Vault SECRET whose value is the certificate PEM — a public-only
+//  stored as a Key Vault SECRET whose value is the certificate PEM - a public-only
 //  certificate cannot be a Key Vault *certificate* object (those require a private
 //  key). The PEM may contain MORE THAN ONE certificate (e.g. the root plus the
 //  issuing/intermediate CA); all of them are loaded as trust anchors, so a device
@@ -13,7 +13,7 @@
 //
 //  The reader is tolerant of how the value was stored: a PEM block (normal), a
 //  base64 DER certificate, or a base64 PKCS#12 (a Key Vault certificate object's
-//  exported secret) — in every case only the PUBLIC certificate(s) are kept.
+//  exported secret) - in every case only the PUBLIC certificate(s) are kept.
 //
 //  Local/dev can instead supply an inline PEM or a file path. The fetch is async,
 //  so it runs once at startup (Program.cs) and the resolved anchor is registered as
@@ -94,7 +94,7 @@ public static class CaTrustResolver
 
     /// <summary>
     /// Parse CA certificate(s) from a Key Vault secret value: a PEM block (one or
-    /// more certs — the normal case), a base64 DER certificate, or a base64 PKCS#12
+    /// more certs - the normal case), a base64 DER certificate, or a base64 PKCS#12
     /// (a KV certificate object's exported secret). Only PUBLIC certs are kept.
     /// </summary>
     private static X509Certificate2Collection ParseCaCertificates(string value)
@@ -115,7 +115,7 @@ public static class CaTrustResolver
         }
         catch (CryptographicException)
         {
-            // Not a bare cert — treat as PKCS#12 (a KV certificate export). Keep only
+            // Not a bare cert - treat as PKCS#12 (a KV certificate export). Keep only
             // the public cert; any private key is irrelevant to chain validation.
             using X509Certificate2 bundle = X509CertificateLoader.LoadPkcs12(raw, null);
             col.Add(X509CertificateLoader.LoadCertificate(bundle.Export(X509ContentType.Cert)));

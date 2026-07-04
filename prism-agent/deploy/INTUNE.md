@@ -62,7 +62,7 @@ user needs to be signed in for the service to install.
 
 ## 5. Verifying a device
 
-- Service present:  `sc.exe query ContosoPrismAgent`  (or `Get-Service ContosoPrismAgent` — shows as "Contoso Prism Agent")
+- Service present:  `sc.exe query ContosoPrismAgent`  (or `Get-Service ContosoPrismAgent` - shows as "Contoso Prism Agent")
 - Tracker running:  Task Manager -> a `prism-agent.exe` in the user session
 - Pending uploads:  `Get-ChildItem C:\ProgramData\Prism\Agent\spool\`  (near-empty when healthy)
 - Events:           Event Viewer -> Windows Logs -> Application -> source `ContosoPrismAgent`
@@ -78,10 +78,10 @@ own device's usage.
   EKU = Client Authentication, key in the **machine** store (`LocalMachine\My`).
 - Server-cert trust: if the gateway is on the **Azure Container Apps managed
   domain** (`*.azurecontainerapps.io`), its TLS cert is publicly trusted (DigiCert)
-  and already chains on Windows — **no Trusted Certificate profile is needed**, and
+  and already chains on Windows - **no Trusted Certificate profile is needed**, and
   do **not** pin it (Azure rotates it). Deploy a Trusted Certificate profile only if
   the gateway uses a private/custom server cert. (Your SCEP **CA root** is consumed
-  by the *gateway* to validate the device's client cert — not by the device.)
+  by the *gateway* to validate the device's client cert - not by the device.)
 
 **Configure the uploader** by passing args to `install.ps1` (it writes
 `C:\ProgramData\Prism\Agent\config.json`):
@@ -102,7 +102,7 @@ args. No gateway configured => batches just spool locally.
   that cert (its subject/SAN identifies the machine).
 - Header: `X-Prism-Device: <machineName>`, `User-Agent: ContosoPrismAgent/<version>`
 - Body: `application/json`, camelCase (gzip-compressed when `CompressUploads` is
-  on — the gateway decompresses on `Content-Encoding: gzip`), a `ReceivedBatch`:
+  on - the gateway decompresses on `Content-Encoding: gzip`), a `ReceivedBatch`:
   `{ receivedUtc, machineName, userSid, agentVersion, utcOffsetMinutes, rollups:[ UsageRollup... ] }`
   where `utcOffsetMinutes` is the device's UTC offset so the server can interpret
   each rollup's device-local `date` (`yyyy-MM-dd`). A `UsageRollup` carries only:
@@ -135,7 +135,7 @@ args. No gateway configured => batches just spool locally.
 
 The gateway runs as a Container App behind Envoy ingress, which terminates TLS,
 does the mTLS handshake, and forwards the device's leaf cert to the gateway in
-the `X-Forwarded-Client-Cert` (XFCC) header. The agent needs no change for this —
+the `X-Forwarded-Client-Cert` (XFCC) header. The agent needs no change for this -
 it just presents its SCEP device cert; the ingress + gateway do the rest.
 
 **One-time gateway side (deploy/runbook):**
@@ -157,7 +157,7 @@ powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File install.ps1 ^
   -CertIssuer "CN=<your SCEP issuing CA common name>"
 ```
 - Do **not** pass `-ServerCertThumbprint` for the managed domain (the install
-  script will warn if you do) — the `*.azurecontainerapps.io` cert is publicly
+  script will warn if you do) - the `*.azurecontainerapps.io` cert is publicly
   trusted and rotates.
 - `-CertIssuer` selects the SCEP **device** cert from `LocalMachine\My`; the
   service runs as LocalSystem, so the machine store is correct. (Use
@@ -167,7 +167,7 @@ powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File install.ps1 ^
 confirm the cert is present (`Get-ChildItem Cert:\LocalMachine\My | ? Issuer -match '<CA CN>'`)
 **before** the agent app, so the very first upload cycle already has a cert. If
 the agent installs first it simply spools locally (event ID 300) and starts
-delivering once the cert lands — no data lost.
+delivering once the cert lands - no data lost.
 
 **End-to-end verification (pilot device -> dashboard):**
 1. Device: `Get-ChildItem C:\ProgramData\Prism\Agent\spool\` should trend to

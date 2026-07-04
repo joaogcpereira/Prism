@@ -9,5 +9,5 @@ FROM mcr.microsoft.com/dotnet/runtime:10.0
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=0
 WORKDIR /app
 COPY --from=build /app .
-# Runs to completion and exits — designed for a scheduled Container Apps Job.
+# Runs to completion and exits - designed for a scheduled Container Apps Job.
 ENTRYPOINT ["dotnet", "prism-connectors.dll"]

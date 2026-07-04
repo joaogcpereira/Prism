@@ -36,5 +36,8 @@ Start-Sleep -Seconds 2
 Remove-Item -Recurse -Force $InstallDir -ErrorAction SilentlyContinue
 if ($PurgeData) { Remove-Item -Recurse -Force $DataDir -ErrorAction SilentlyContinue }
 
+# v2: best-effort removal of the Event Log source so an uninstall leaves nothing behind.
+try { [System.Diagnostics.EventLog]::DeleteEventSource('ContosoPrismAgent') } catch { }
+
 Write-Host "Contoso Prism Agent uninstalled."
 exit 0

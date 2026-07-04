@@ -1,4 +1,4 @@
-# Agent IPC — Named Pipe (helper → service)
+# Agent IPC - Named Pipe (helper → service)
 
 The per-session **helper** measures usage as the logged-on user; the
 **service** runs as LocalSystem. Measured rollups travel up this local pipe.
@@ -8,7 +8,7 @@ The per-session **helper** measures usage as the logged-on user; the
 - **Name:** `\\.\pipe\prism-agent-usage`
 - **Owner:** the **service** (LocalSystem) creates the pipe; the helper connects
   as client. The service auto-starts at boot, so it owns the name before any
-  user logs on — a hostile process can't squat it first.
+  user logs on - a hostile process can't squat it first.
 - **Transport:** byte mode with **length-prefixed framing**
   (`[4-byte LE length][payload]`), 8 MB hard cap per frame.
 - **Concurrency:** several server instances accept in parallel, so multiple
@@ -44,7 +44,7 @@ source-generated JSON context (AOT-safe).
   Tighten to `Interactive` (S-1-5-4) if you never expect service-account or
   scheduled-task clients.
 - **Input is untrusted.** Payloads are size-bounded, schema-checked, only
-  deserialized — never executed. This is a telemetry channel, never a command
+  deserialized - never executed. This is a telemetry channel, never a command
   channel. Worst-case abuse is one device's own usage numbers being skewed.
 - **Resilience:** one bad client never stops the accept loop; an unreachable
   service simply defers shipping (data is retained and retried).

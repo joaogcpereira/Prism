@@ -1,5 +1,5 @@
 // =============================================================================
-// containerregistry.bicep  —  Prism (AppID 0001) Azure Container Registry
+// containerregistry.bicep  -  Prism (AppID 0001) Azure Container Registry
 // =============================================================================
 
 // =============== //

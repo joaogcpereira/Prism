@@ -173,9 +173,13 @@ public sealed class CostConnector : IConnector
         return local;
     }
 
+    // Invariant culture: Cost Management serializes decimals with '.' - parsing with the
+    // container's ambient culture (e.g. de-DE, comma decimal) silently mangled amounts.
     private static decimal AsDecimal(JsonElement e) =>
         e.ValueKind == JsonValueKind.Number && e.TryGetDecimal(out decimal d) ? d
-        : decimal.TryParse(e.ValueKind == JsonValueKind.String ? e.GetString() : null, out decimal s) ? s : 0m;
+        : decimal.TryParse(e.ValueKind == JsonValueKind.String ? e.GetString() : null,
+            System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture,
+            out decimal s) ? s : 0m;
 
     private static string? AsString(JsonElement e) =>
         e.ValueKind == JsonValueKind.String ? e.GetString()

@@ -37,7 +37,7 @@ internal static class SessionMode
             ready.Wait();
         }
 
-        // NOTE: not `using` — see file header. Cancelled on shutdown, never disposed.
+        // NOTE: not `using` - see file header. Cancelled on shutdown, never disposed.
         var shutdown = new CancellationTokenSource();
 
         // Cancel quietly; guard against any late call after a (hypothetical) dispose.

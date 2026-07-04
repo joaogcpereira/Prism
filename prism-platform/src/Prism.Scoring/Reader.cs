@@ -1,7 +1,7 @@
 // ============================================================
 //  Reader.cs  (Prism.Scoring)
 //  Reads the warehouse views the engine needs. Connects as the
-//  managed identity (Active Directory Default) — no secret.
+//  managed identity (Active Directory Default) - no secret.
 // ============================================================
 using Microsoft.Data.SqlClient;
 
@@ -19,7 +19,9 @@ public sealed class Reader(string connectionString)
             AssignmentState, AssignmentLastUpdatedDateTime, M365ActivityConcealed, M365LastActivityDate, Country,
             TeamsLastActivityDate, ExchangeLastActivityDate, OneDriveLastActivityDate,
             SharePointLastActivityDate, M365ReportRefreshDate,
-            LastSuccessfulSignInDateTime, DisabledPlanCount
+            LastSuccessfulSignInDateTime, DisabledPlanCount,
+            JobTitle, UserType, OnPremisesSyncEnabled, MailboxPurpose, MailboxAutoReply,
+            IsMfaRegistered, AuthMethodsUpdatedDateTime
             FROM vw.LicenseSignals";
         var rows = new List<SignalRow>();
         await using SqlConnection c = await OpenAsync(ct);
@@ -55,6 +57,13 @@ public sealed class Reader(string connectionString)
                 M365ReportRefreshDate = Dt(rd, 23),
                 LastSuccessfulSignInDateTime = Dt(rd, 24),
                 DisabledPlanCount = rd.IsDBNull(25) ? 0 : Convert.ToInt32(rd.GetValue(25)),
+                JobTitle = Str(rd, 26),
+                UserType = Str(rd, 27),
+                OnPremisesSyncEnabled = Bool(rd, 28),
+                MailboxPurpose = Str(rd, 29),
+                MailboxAutoReply = Str(rd, 30),
+                IsMfaRegistered = Bool(rd, 31),
+                AuthMethodsUpdatedDateTime = Dt(rd, 32),
             });
         }
         return rows;
@@ -88,7 +97,7 @@ public sealed class Reader(string connectionString)
         }
         catch (SqlException)
         {
-            // vw.AppUsageByUser90 not present yet (wave3-scoring.sql not run) — app
+            // vw.AppUsageByUser90 not present yet (wave3-scoring.sql not run) - app
             // corroboration is optional, so proceed without it rather than failing the run.
         }
         return map;
@@ -134,7 +143,7 @@ public sealed class Reader(string connectionString)
 
     public async Task<Dictionary<string, List<InstallRow>>> ReadInstallsAsync(CancellationToken ct)
     {
-        // DISTINCT collapses device multiplicity — the engine only needs "installed
+        // DISTINCT collapses device multiplicity - the engine only needs "installed
         // somewhere for this user, per source", not per-device rows.
         const string sql = "SELECT DISTINCT UserId, AppName, SourceSystem FROM vw.SoftwareInstallByUser";
         var map = new Dictionary<string, List<InstallRow>>(StringComparer.OrdinalIgnoreCase);
@@ -153,7 +162,7 @@ public sealed class Reader(string connectionString)
         }
         catch (SqlException)
         {
-            // vw.SoftwareInstallByUser not present (wave6-software-signals.sql not run) —
+            // vw.SoftwareInstallByUser not present (wave6-software-signals.sql not run) -
             // install evidence is optional, so proceed without it rather than failing.
         }
         return map;
@@ -182,7 +191,7 @@ public sealed class Reader(string connectionString)
         }
         catch (SqlException)
         {
-            // Optional view missing — proceed without coverage (absence evidence disabled).
+            // Optional view missing - proceed without coverage (absence evidence disabled).
         }
         return map;
     }
@@ -213,7 +222,7 @@ public sealed class Reader(string connectionString)
         }
         catch (SqlException)
         {
-            // vw.SoftwareRunByUser not present (wave7-mde-hunting.sql not run) —
+            // vw.SoftwareRunByUser not present (wave7-mde-hunting.sql not run) -
             // run telemetry is optional, so proceed without it.
         }
         return map;
@@ -241,7 +250,7 @@ public sealed class Reader(string connectionString)
                 });
             }
         }
-        catch (SqlException) { /* vw.AppSignInByUser absent (wave8 not run) — optional. */ }
+        catch (SqlException) { /* vw.AppSignInByUser absent (wave8 not run) - optional. */ }
         return map;
     }
 
@@ -268,14 +277,48 @@ public sealed class Reader(string connectionString)
                 };
             }
         }
-        catch (SqlException) { /* vw.M365AppUsageByUser absent (wave8 not run) — optional. */ }
+        catch (SqlException) { /* vw.M365AppUsageByUser absent (wave8 not run) - optional. */ }
         return map;
     }
 
     public async Task<Dictionary<string, CopilotRow>> ReadCopilotUsageAsync(CancellationToken ct)
     {
-        const string sql = "SELECT UserId, LastActivityAnyDate FROM vw.CopilotUsageByUser";
+        // v2 view carries depth (surfaces used); fall back to the v1 view on older schemas.
         var map = new Dictionary<string, CopilotRow>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            await ReadCopilotFrom("SELECT UserId, LastActivityAnyDate, SurfacesUsed FROM vw.CopilotDepthByUser", true, map, ct);
+        }
+        catch (SqlException)
+        {
+            try { await ReadCopilotFrom("SELECT UserId, LastActivityAnyDate FROM vw.CopilotUsageByUser", false, map, ct); }
+            catch (SqlException) { /* neither view present - Copilot signal optional. */ }
+        }
+        return map;
+    }
+
+    private async Task ReadCopilotFrom(string sql, bool hasDepth, Dictionary<string, CopilotRow> map, CancellationToken ct)
+    {
+        await using SqlConnection c = await OpenAsync(ct);
+        await using var cmd = new SqlCommand(sql, c) { CommandTimeout = 300 };
+        await using SqlDataReader rd = await cmd.ExecuteReaderAsync(ct);
+        while (await rd.ReadAsync(ct))
+        {
+            string? uid = Str(rd, 0);
+            if (string.IsNullOrEmpty(uid)) continue;
+            map[uid] = new CopilotRow
+            {
+                UserId = uid,
+                LastActivity = Dt(rd, 1),
+                SurfacesUsed = hasDepth && !rd.IsDBNull(2) ? Convert.ToInt32(rd.GetValue(2)) : 0,
+            };
+        }
+    }
+
+    public async Task<Dictionary<string, PstnRow>> ReadPstnUsageAsync(CancellationToken ct)
+    {
+        const string sql = "SELECT UserId, CallCount, TotalDurationSeconds, LastCallDateTime, WindowDays FROM vw.PstnUsageByUser";
+        var map = new Dictionary<string, PstnRow>(StringComparer.OrdinalIgnoreCase);
         try
         {
             await using SqlConnection c = await OpenAsync(ct);
@@ -285,10 +328,17 @@ public sealed class Reader(string connectionString)
             {
                 string? uid = Str(rd, 0);
                 if (string.IsNullOrEmpty(uid)) continue;
-                map[uid] = new CopilotRow { UserId = uid, LastActivity = Dt(rd, 1) };
+                map[uid] = new PstnRow
+                {
+                    UserId = uid,
+                    CallCount = rd.IsDBNull(1) ? 0 : Convert.ToInt32(rd.GetValue(1)),
+                    TotalDurationSeconds = rd.IsDBNull(2) ? 0 : Convert.ToInt64(rd.GetValue(2)),
+                    LastCall = Dt(rd, 3),
+                    WindowDays = rd.IsDBNull(4) ? 0 : Convert.ToInt32(rd.GetValue(4)),
+                };
             }
         }
-        catch (SqlException) { /* vw.CopilotUsageByUser absent (wave9-copilot.sql not run) — optional. */ }
+        catch (SqlException) { /* vw.PstnUsageByUser absent or connector disabled - optional. */ }
         return map;
     }
 
@@ -314,7 +364,7 @@ public sealed class Reader(string connectionString)
                 };
             }
         }
-        catch (SqlException) { /* vw.TeamsActivityByUser absent (wave10-enrichment.sql not run) — optional. */ }
+        catch (SqlException) { /* vw.TeamsActivityByUser absent (wave10-enrichment.sql not run) - optional. */ }
         return map;
     }
 

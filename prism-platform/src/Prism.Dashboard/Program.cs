@@ -62,10 +62,61 @@ if (dashDir is not null)
 app.MapGet("/api/summary",      () => Single("SELECT * FROM vw.SavingsSummary"));
 app.MapGet("/api/review-queue", () => Many(
     "SELECT UserId, SkuId, UserPrincipalName, DisplayName, SkuPartNumber, SkuName, Verdict, WasteScore, " +
-    "Confidence, ReasonCodes, EffectiveInactiveDays, EstMonthlySavings, Currency, Department, Country FROM vw.ReviewQueue"));
+    "Confidence, ReasonCodes, EffectiveInactiveDays, EstMonthlySavings, Currency, Department, Country, " +
+    "SignalCount, EvidenceJson, HumanDecision, DecidedBy, DecidedUtc, SnoozeUntilUtc, DecisionNote, Snoozed " +
+    "FROM vw.ReviewQueue"));
 app.MapGet("/api/history", () => Many(
     "SELECT TOP 24 RunId, ScoredUtc, ReclaimMonthlySavings, ReviewMonthlySavings, IdleSeatMonthlySavings, Currency " +
     "FROM score.RunSummary ORDER BY ScoredUtc DESC"));
+
+// ---- v2: run-over-run trend (oldest → newest, for the savings/verdict chart) ----
+app.MapGet("/api/trends", () => Many(
+    "SELECT RunId, ScoredUtc, Assignments, KeepCount, ReviewCount, ReclaimCount, " +
+    "ReclaimMonthlySavings, ReviewMonthlySavings, IdleSeatMonthlySavings, Currency " +
+    "FROM (SELECT TOP 60 * FROM score.RunSummary ORDER BY ScoredUtc DESC) t ORDER BY ScoredUtc ASC"));
+
+// ---- v2: what changed since the previous scoring run (new / escalated / relaxed) ----
+app.MapGet("/api/changes", () => Many(
+    "SELECT d.UserId, d.SkuId, d.SkuPartNumber, d.PrevVerdict, d.CurrVerdict, d.PrevScore, d.CurrScore, " +
+    "d.EstMonthlySavings, d.ChangeKind, v.DisplayName, v.UserPrincipalName, v.SkuName " +
+    "FROM vw.VerdictDelta d LEFT JOIN score.AssignmentVerdict v ON v.UserId = d.UserId AND v.SkuId = d.SkuId " +
+    "WHERE d.ChangeKind <> 'SAME' ORDER BY CASE d.ChangeKind WHEN 'ESCALATED' THEN 0 WHEN 'NEW' THEN 1 ELSE 2 END, d.EstMonthlySavings DESC"));
+
+// ---- v2: per-seat evidence trail (the drawer behind every queue row) ----
+// Parameterised + camelCased like the list endpoints (Qc is defined below with the
+// other local helpers; local functions are callable before their declaration).
+app.MapGet("/api/evidence", async (string user, string sku) =>
+{
+    if (string.IsNullOrWhiteSpace(cs)) return Results.StatusCode(503);
+    if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(sku)) return Results.BadRequest();
+    try
+    {
+        var rows = await Qc(
+            "SELECT v.*, d.Decision AS HumanDecision, d.DecidedBy, d.DecidedUtc, d.SnoozeUntilUtc, d.Note AS DecisionNote " +
+            "FROM score.AssignmentVerdict v LEFT JOIN score.Decision d ON d.UserId=v.UserId AND d.SkuId=v.SkuId " +
+            "WHERE v.UserId=@u AND v.SkuId=@s", ("@u", user), ("@s", sku));
+        var hist = await Qc(
+            "SELECT TOP 30 RunId, ScoredUtc, Verdict, WasteScore, Confidence, EstMonthlySavings FROM score.VerdictHistory " +
+            "WHERE UserId=@u AND SkuId=@s ORDER BY ScoredUtc DESC", ("@u", user), ("@s", sku));
+        return Results.Json(new { verdict = rows.Count > 0 ? rows[0] : null, history = hist });
+    }
+    catch (Exception ex) { app.Logger.LogError(ex, "/api/evidence failed"); return Results.Problem("Evidence query failed."); }
+});
+
+// ---- v2: department rollup (treemap / hotspot view) ----
+app.MapGet("/api/departments", () => Many(
+    "SELECT COALESCE(NULLIF(Department, N''), N'Unattributed') AS Department, " +
+    "COUNT(*) AS Seats, COUNT(DISTINCT UserId) AS Users, " +
+    "SUM(CASE WHEN Verdict='RECLAIM' THEN 1 ELSE 0 END) AS ReclaimSeats, " +
+    "SUM(CASE WHEN Verdict='REVIEW' THEN 1 ELSE 0 END) AS ReviewSeats, " +
+    "SUM(CASE WHEN Verdict<>'KEEP' THEN ISNULL(EstMonthlySavings,0) ELSE 0 END) AS FlaggedMonthly " +
+    "FROM score.AssignmentVerdict GROUP BY COALESCE(NULLIF(Department, N''), N'Unattributed') " +
+    "ORDER BY FlaggedMonthly DESC"));
+
+// ---- v2: data-health strip (connector freshness - verdicts are only as good as inputs) ----
+app.MapGet("/api/health", () => Many(
+    "SELECT Entity, Source, LastOkUtc, LastAttemptUtc, FailedLoads7d, LastOkRows, HoursSinceOk " +
+    "FROM vw.DataFreshness ORDER BY CASE WHEN LastOkUtc IS NULL THEN 0 ELSE 1 END, HoursSinceOk DESC"));
 app.MapGet("/api/skus", () => Many(
     "SELECT v.SkuId, v.SkuPartNumber, v.SkuName, v.Verdict, v.SeatsOwned, v.SeatsAssigned, v.SeatsIdle, " +
     "v.EstMonthlySavings, v.ReasonCodes, c.MonthlyUnitCost AS Unit " +
@@ -133,21 +184,28 @@ app.MapGet("/api/watched-apps", () => Many(
     "FROM vw.AppEstate ORDER BY CASE WHEN AnnualExposure IS NULL THEN 1 ELSE 0 END, AnnualExposure DESC, InstallDeviceCount DESC"));
 
 // ---- decision log (writes to Prism's OWN score.Decision table; never to Microsoft 365) ----
-app.MapGet("/api/decisions", () => Many("SELECT UserId, SkuId, Decision, DecidedUtc, DecidedBy FROM score.Decision"));
+app.MapGet("/api/decisions", () => Many(
+    "SELECT UserId, SkuId, SkuPartNumber, Decision, DecidedUtc, DecidedBy, SnoozeUntilUtc, Note FROM score.Decision"));
+// v2: the full append-only audit trail (every decision ever recorded, latest first).
+app.MapGet("/api/decision-log", () => Many(
+    "SELECT TOP 500 UserId, SkuId, SkuPartNumber, Decision, DecidedBy, DecidedUtc, SnoozeUntilUtc, Note, VerdictAtTime, SavingsAtTime " +
+    "FROM score.DecisionLog ORDER BY DecidedUtc DESC"));
 
 app.MapPost("/api/decision", async (HttpContext ctx) =>
 {
     if (string.IsNullOrWhiteSpace(cs)) return Results.StatusCode(503);
-    string? userId = null, skuId = null, part = null, decision = null, runId = null;
+    string? userId = null, skuId = null, part = null, decision = null, runId = null, note = null, snoozeRaw = null;
     try
     {
         using var doc = await System.Text.Json.JsonDocument.ParseAsync(ctx.Request.Body);
         var root = doc.RootElement;
-        userId   = root.TryGetProperty("userId", out var u) ? u.GetString() : null;
-        skuId    = root.TryGetProperty("skuId", out var s) ? s.GetString() : null;
-        part     = root.TryGetProperty("skuPartNumber", out var p) ? p.GetString() : null;
-        decision = root.TryGetProperty("decision", out var d) ? d.GetString() : null;
-        runId    = root.TryGetProperty("runId", out var r) ? r.GetString() : null;
+        userId    = root.TryGetProperty("userId", out var u) ? u.GetString() : null;
+        skuId     = root.TryGetProperty("skuId", out var s) ? s.GetString() : null;
+        part      = root.TryGetProperty("skuPartNumber", out var p) ? p.GetString() : null;
+        decision  = root.TryGetProperty("decision", out var d) ? d.GetString() : null;
+        runId     = root.TryGetProperty("runId", out var r) ? r.GetString() : null;
+        note      = root.TryGetProperty("note", out var n) ? n.GetString() : null;
+        snoozeRaw = root.TryGetProperty("snoozeUntil", out var z) ? z.GetString() : null;
     }
     catch { return Results.BadRequest(new { error = "invalid body" }); }
     if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(skuId) || string.IsNullOrEmpty(decision))
@@ -155,23 +213,51 @@ app.MapPost("/api/decision", async (HttpContext ctx) =>
     // Controlled vocabulary - anything else is rejected rather than stored.
     if (decision is not ("reclaim" or "keep" or "snooze"))
         return Results.BadRequest(new { error = "decision must be reclaim | keep | snooze" });
+    // v2: an optional snooze horizon (ISO date/datetime, must be in the future) and a
+    // bounded free-text note (the reviewer's rationale - the audit trail's "why").
+    DateTime? snoozeUntil = null;
+    if (!string.IsNullOrWhiteSpace(snoozeRaw))
+    {
+        if (!DateTime.TryParse(snoozeRaw, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal,
+                out DateTime z) || z <= DateTime.UtcNow || z > DateTime.UtcNow.AddYears(2))
+            return Results.BadRequest(new { error = "snoozeUntil must be a future ISO date within 2 years" });
+        snoozeUntil = z;
+    }
+    if (note is { Length: > 400 }) note = note[..400];
 
     var byRaw = ctx.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].ToString();
     var by = string.IsNullOrEmpty(byRaw) ? "dashboard" : byRaw;
 
+    // Latest-state upsert + append-only audit row (with the verdict at decision time, so
+    // the log shows what the human saw). Both tables ship in schema v2; the inline DDL
+    // keeps a fresh dev database usable before schema.sql has run.
     const string sql = @"
         IF OBJECT_ID('score.Decision') IS NULL
         CREATE TABLE score.Decision(
             UserId nvarchar(64) NOT NULL, SkuId nvarchar(64) NOT NULL,
             SkuPartNumber nvarchar(128) NULL, Decision nvarchar(20) NOT NULL,
             DecidedBy nvarchar(256) NULL, DecidedUtc datetime2(3) NOT NULL CONSTRAINT DF_score_Decision_ts DEFAULT sysutcdatetime(),
-            RunId nvarchar(64) NULL,
+            RunId nvarchar(64) NULL, SnoozeUntilUtc datetime2(3) NULL, Note nvarchar(400) NULL,
             CONSTRAINT PK_score_Decision PRIMARY KEY (UserId, SkuId));
+        IF COL_LENGTH('score.Decision','SnoozeUntilUtc') IS NULL ALTER TABLE score.Decision ADD SnoozeUntilUtc datetime2(3) NULL;
+        IF COL_LENGTH('score.Decision','Note') IS NULL ALTER TABLE score.Decision ADD Note nvarchar(400) NULL;
+        IF OBJECT_ID('score.DecisionLog') IS NULL
+        CREATE TABLE score.DecisionLog(
+            DecisionLogId bigint IDENTITY(1,1) CONSTRAINT PK_score_DecisionLog PRIMARY KEY,
+            UserId nvarchar(64) NOT NULL, SkuId nvarchar(64) NOT NULL, SkuPartNumber nvarchar(128) NULL,
+            Decision nvarchar(20) NOT NULL, DecidedBy nvarchar(256) NULL,
+            DecidedUtc datetime2(3) NOT NULL CONSTRAINT DF_score_DecisionLog_ts DEFAULT sysutcdatetime(),
+            RunId nvarchar(64) NULL, SnoozeUntilUtc datetime2(3) NULL, Note nvarchar(400) NULL,
+            VerdictAtTime nvarchar(16) NULL, SavingsAtTime decimal(12,2) NULL);
         MERGE score.Decision AS t
         USING (SELECT @u AS UserId, @s AS SkuId) src ON t.UserId = src.UserId AND t.SkuId = src.SkuId
-        WHEN MATCHED THEN UPDATE SET Decision=@d, SkuPartNumber=@p, DecidedBy=@by, DecidedUtc=sysutcdatetime(), RunId=@r
-        WHEN NOT MATCHED THEN INSERT (UserId, SkuId, SkuPartNumber, Decision, DecidedBy, RunId)
-            VALUES (@u, @s, @p, @d, @by, @r);";
+        WHEN MATCHED THEN UPDATE SET Decision=@d, SkuPartNumber=@p, DecidedBy=@by, DecidedUtc=sysutcdatetime(), RunId=@r, SnoozeUntilUtc=@z, Note=@n
+        WHEN NOT MATCHED THEN INSERT (UserId, SkuId, SkuPartNumber, Decision, DecidedBy, RunId, SnoozeUntilUtc, Note)
+            VALUES (@u, @s, @p, @d, @by, @r, @z, @n);
+        INSERT INTO score.DecisionLog (UserId, SkuId, SkuPartNumber, Decision, DecidedBy, RunId, SnoozeUntilUtc, Note, VerdictAtTime, SavingsAtTime)
+        SELECT @u, @s, @p, @d, @by, @r, @z, @n, v.Verdict, v.EstMonthlySavings
+        FROM (SELECT 1 AS one) x LEFT JOIN score.AssignmentVerdict v ON v.UserId=@u AND v.SkuId=@s;";
     try
     {
         await using var c = new SqlConnection(cs);
@@ -183,11 +269,23 @@ app.MapPost("/api/decision", async (HttpContext ctx) =>
         cmd.Parameters.AddWithValue("@d", decision);
         cmd.Parameters.AddWithValue("@by", by);
         cmd.Parameters.AddWithValue("@r", (object?)runId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@z", (object?)snoozeUntil ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@n", (object?)note ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync();
         return Results.Ok(new { ok = true });
     }
     catch (Exception ex) { app.Logger.LogError(ex, "/api/decision failed"); return Results.Problem("Could not record the decision."); }
 });
+
+// ---- v2: CSV exports (the artifact a licensing team hands to procurement/IAM) ----
+app.MapGet("/api/export/review.csv", () => Csv(
+    "SELECT UserPrincipalName, DisplayName, Department, Country, SkuPartNumber, SkuName, Verdict, WasteScore, " +
+    "Confidence, ReasonCodes, EffectiveInactiveDays, EstMonthlySavings, Currency, SignalCount, " +
+    "HumanDecision, DecidedBy, DecidedUtc, SnoozeUntilUtc, DecisionNote " +
+    "FROM vw.ReviewQueue ORDER BY EstMonthlySavings DESC", "prism-review-queue.csv"));
+app.MapGet("/api/export/decisions.csv", () => Csv(
+    "SELECT UserId, SkuId, SkuPartNumber, Decision, DecidedBy, DecidedUtc, SnoozeUntilUtc, Note, VerdictAtTime, SavingsAtTime " +
+    "FROM score.DecisionLog ORDER BY DecidedUtc DESC", "prism-decision-log.csv"));
 
 // ---- Wave 2: optimisation views (read-only SELECTs over the analytical views) ----
 app.MapGet("/api/rightsize", () => Many(
@@ -216,6 +314,26 @@ app.MapGet("/api/direct-assignments", () => Many(
     "FROM vw.DirectAssignments ORDER BY DisplayName, SkuName"));
 app.MapGet("/api/direct-assignment-summary", () => Many(
     "SELECT Department, DirectAssignments, Users, MonthlyCost FROM vw.DirectAssignmentSummary ORDER BY DirectAssignments DESC"));
+
+// Parameterised query with the SAME response shaping as the list endpoints
+// (camelCase keys + UTC-kind normalization) - used by the v2 endpoints.
+async Task<List<Dictionary<string, object?>>> Qc(string sql, params (string, object?)[] ps)
+{
+    var list = new List<Dictionary<string, object?>>();
+    await using var c = new SqlConnection(cs);
+    await c.OpenAsync();
+    await using var cmd = new SqlCommand(sql, c) { CommandTimeout = 30 };
+    foreach (var p in ps) cmd.Parameters.AddWithValue(p.Item1, (object?)p.Item2 ?? DBNull.Value);
+    await using var r = await cmd.ExecuteReaderAsync();
+    while (await r.ReadAsync())
+    {
+        var d = new Dictionary<string, object?>(r.FieldCount);
+        for (int i = 0; i < r.FieldCount; i++)
+            d[Camel(r.GetName(i))] = r.IsDBNull(i) ? null : Norm(r.GetValue(i));
+        list.Add(d);
+    }
+    return list;
+}
 
 // ---- correlated drill-down: /api/drill?type=user|sku|vendor|department|app|device&key=... ----
 async Task<List<Dictionary<string, object?>>> Q(string sql, params (string, object?)[] ps)
@@ -504,7 +622,7 @@ app.MapGet("/api/drill", async (string type, string key) =>
                     Fact("Model", d.GetValueOrDefault("Model")),
                     Fact("Last sync", d.GetValueOrDefault("LastSyncDateTime")) } });
             }
-            // owner department + country (joined from the device's primary user) — both drillable
+            // owner department + country (joined from the device's primary user) - both drillable
             if (d?.GetValueOrDefault("UserId")?.ToString() is { Length: > 0 } devUser)
             {
                 var ou = (await Qsafe("SELECT Department, UsageLocation FROM dim.[User] WHERE UserId=@k", ("@k", devUser))).FirstOrDefault();
@@ -519,7 +637,7 @@ app.MapGet("/api/drill", async (string type, string key) =>
                     ap.Select(x => Row(new object?[] { x["AppName"], x["FgActiveHours90"], x["ActiveDays90"], x["Launches"], x["UsageState"] }, "app", x["AppName"]?.ToString()))));
             else
                 sections.Add(new { heading = "Applications (agent)", kind = "note", text = "No agent-measured usage for this device yet - it reports once the Prism agent is running on it." });
-            // installed software on this device (Intune inventory) — each app drillable
+            // installed software on this device (Intune inventory) - each app drillable
             var dsw = await Qsafe("SELECT DisplayName, AppVersion FROM vw.AppInstall WHERE DeviceName=@k ORDER BY DisplayName", ("@k", key));
             if (dsw.Count > 0)
                 sections.Add(TableSection("Installed software (Intune, " + dsw.Count + ")", new[] { "Application", "Version" },
@@ -548,6 +666,45 @@ async Task<IResult> Single(string sql)
     if (string.IsNullOrWhiteSpace(cs)) return Results.StatusCode(503);
     try { var l = await ReadAsync(cs!, sql); return Results.Json(l.Count > 0 ? l[0] : new Dictionary<string, object?>()); }
     catch (Exception ex) { app.Logger.LogError(ex, "API query failed: {Sql}", sql); return Results.Problem("A database query failed."); }
+}
+// v2: stream a query as RFC-4180 CSV (quoted, CRLF, UTF-8 BOM so Excel opens it cleanly).
+async Task<IResult> Csv(string sql, string fileName)
+{
+    if (string.IsNullOrWhiteSpace(cs)) return Results.StatusCode(503);
+    try
+    {
+        var sb = new System.Text.StringBuilder(64 * 1024);
+        await using var c = new SqlConnection(cs);
+        await c.OpenAsync();
+        await using var cmd = new SqlCommand(sql, c) { CommandTimeout = 60 };
+        await using SqlDataReader r = await cmd.ExecuteReaderAsync();
+        for (int i = 0; i < r.FieldCount; i++) { if (i > 0) sb.Append(','); sb.Append(Quote(r.GetName(i))); }
+        sb.Append("\r\n");
+        while (await r.ReadAsync())
+        {
+            for (int i = 0; i < r.FieldCount; i++)
+            {
+                if (i > 0) sb.Append(',');
+                object? v = r.IsDBNull(i) ? null : r.GetValue(i);
+                sb.Append(Quote(v switch
+                {
+                    null => "",
+                    DateTime dt => DateTime.SpecifyKind(dt, DateTimeKind.Utc).ToString("yyyy-MM-dd HH:mm:ss"),
+                    decimal m => m.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    _ => v.ToString() ?? "",
+                }));
+            }
+            sb.Append("\r\n");
+        }
+        byte[] bom = [0xEF, 0xBB, 0xBF];
+        byte[] body = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+        return Results.File([.. bom, .. body], "text/csv; charset=utf-8", fileName);
+    }
+    catch (Exception ex) { app.Logger.LogError(ex, "CSV export failed: {Sql}", sql); return Results.Problem("Export failed."); }
+
+    static string Quote(string s) =>
+        s.Contains(',') || s.Contains('"') || s.Contains('\n') || s.Contains('\r')
+            ? "\"" + s.Replace("\"", "\"\"") + "\"" : s;
 }
 static async Task<List<Dictionary<string, object?>>> ReadAsync(string cs, string sql)
 {

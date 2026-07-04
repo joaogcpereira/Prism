@@ -34,7 +34,7 @@ public sealed class MdeClient : IDisposable
     private readonly int _maxRetryAfterSeconds;
     private readonly ILogger<MdeClient> _log;
 
-    /// <summary>Count of 429 waits honored — lets a caller pace adaptively.</summary>
+    /// <summary>Count of 429 waits honored - lets a caller pace adaptively.</summary>
     public long ThrottleEvents { get; private set; }
 
     public MdeClient(string baseUrl, string tenantId, string appId, string apiScope,
@@ -58,7 +58,7 @@ public sealed class MdeClient : IDisposable
     /// <summary>
     /// GET an OData endpoint and stream every item across all @odata.nextLink pages.
     /// Each page is parsed, its value[] elements handed to <paramref name="onItem"/>,
-    /// then disposed — so JsonElements never outlive their document.
+    /// then disposed - so JsonElements never outlive their document.
     /// </summary>
     public async Task GetPagedAsync(string relativeUrl, Action<JsonElement> onItem, CancellationToken ct)
     {
@@ -94,6 +94,16 @@ public sealed class MdeClient : IDisposable
 
             HttpResponseMessage resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
 
+            // One-shot 401 retry: a token minted at the edge of its window can expire in
+            // flight; the credential cache refreshes on the re-fetch above. A SECOND 401
+            // is a real authorization problem and surfaces normally.
+            if (resp.StatusCode == HttpStatusCode.Unauthorized && attempt == 0)
+            {
+                _log.LogWarning("Defender for Endpoint 401; refreshing the app token and retrying once.");
+                resp.Dispose();
+                continue;
+            }
+
             bool throttled = resp.StatusCode == HttpStatusCode.TooManyRequests;
             bool server = (int)resp.StatusCode >= 500;
             int ceiling = throttled ? _throttleMaxRetries : _maxRetries;
@@ -109,13 +119,13 @@ public sealed class MdeClient : IDisposable
 
             TimeSpan delay = throttled ? ThrottleDelay(resp) : BackoffDelay(attempt);
             if (throttled) ThrottleEvents++;
-            // Advanced hunting explains WHICH quota was hit (calls vs CPU) in the 429 body —
+            // Advanced hunting explains WHICH quota was hit (calls vs CPU) in the 429 body -
             // surface it so the operator can tell pacing problems from CPU-heavy queries.
             string detail = "";
             if (throttled)
             {
                 try { detail = (await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false)).Trim(); }
-                catch { /* body unavailable — header-driven wait still applies */ }
+                catch { /* body unavailable - header-driven wait still applies */ }
                 if (detail.Length > 200) detail = detail[..200];
             }
             _log.LogWarning("Defender for Endpoint {Status}; waiting {Delay}s then retry (attempt {Attempt}/{Max}). {Detail}",
@@ -134,11 +144,13 @@ public sealed class MdeClient : IDisposable
         else d = TimeSpan.FromSeconds(5);
         if (d < TimeSpan.Zero) d = TimeSpan.FromSeconds(5);
         TimeSpan cap = TimeSpan.FromSeconds(_maxRetryAfterSeconds);
-        return d > cap ? cap : d;
+        if (d > cap) d = cap;
+        return d + TimeSpan.FromMilliseconds(Random.Shared.Next(250, 1500));   // jitter: decorrelate parallel loops
     }
 
     private static TimeSpan BackoffDelay(int attempt) =>
-        TimeSpan.FromSeconds(Math.Min(60, Math.Pow(2, attempt)));
+        TimeSpan.FromSeconds(Math.Min(60, Math.Pow(2, attempt)))
+        + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000));              // full jitter on the step
 
     public void Dispose() => _http.Dispose();
 }

@@ -34,12 +34,23 @@ public sealed class WarehouseWriter
     public Task UpsertAsync(string target, string[] cols, string[] keyCols, string onPredicate, DataTable data, string source, string runId, string entity, CancellationToken ct)
         => LoadAsync(target, cols, data, LoadMode.Upsert, keyCols, onPredicate, source, runId, entity, ct);
 
+    // Azure SQL transient error numbers (serverless auto-pause resume, failover, throttling,
+    // deadlock). The FIRST touch of a paused serverless database routinely fails with 40613
+    // ("database not currently available") while it resumes - without a retry the whole
+    // connector job dies on the cheapest, most common deployment shape.
+    private static readonly int[] s_transientErrors =
+        [4060, 40197, 40501, 40613, 49918, 49919, 49920, 10928, 10929, 10053, 10054, 10060, 11001, 1205, 233, -2];
+
+    private static bool IsTransient(Exception ex) => ex switch
+    {
+        SqlException sq => sq.Errors.Cast<SqlError>().Any(e => s_transientErrors.Contains(e.Number)),
+        InvalidOperationException ioe => ioe.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase),
+        _ => false,
+    };
+
     private async Task LoadAsync(string target, string[] cols, DataTable data, LoadMode mode,
         string[] keyCols, string? onPredicate, string source, string runId, string entity, CancellationToken ct)
     {
-        DateTime started = DateTime.UtcNow;
-        string colList = string.Join(", ", cols.Select(Q));
-
         // Safety: never replace/merge a table with an empty snapshot. A transient empty
         // result (or a not-yet-populated warehouse) must not delete previously good rows
         // and blank the dashboard. Keep the prior load until a non-empty one arrives.
@@ -49,6 +60,34 @@ public sealed class WarehouseWriter
                 mode, target, source);
             return;
         }
+
+        // Transient-fault retry with decorrelated jitter. Delays are sized for a serverless
+        // resume (tens of seconds), and each attempt restarts the WHOLE load - the staging
+        // table is session-scoped, so a fresh connection always starts clean.
+        const int maxAttempts = 4;
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await LoadOnceAsync(target, cols, data, mode, keyCols, onPredicate, source, runId, entity, ct).ConfigureAwait(false);
+                return;
+            }
+            catch (Exception ex) when (attempt < maxAttempts && IsTransient(ex) && !ct.IsCancellationRequested)
+            {
+                int baseMs = attempt switch { 1 => 5_000, 2 => 20_000, _ => 45_000 };
+                int delayMs = baseMs + Random.Shared.Next(0, baseMs / 2);   // jitter: avoid herd on shared resume
+                _log.LogWarning(ex, "warehouse {Entity}: transient failure on attempt {Attempt}/{Max}; retrying in {Delay}s.",
+                    entity, attempt, maxAttempts, delayMs / 1000);
+                await Task.Delay(delayMs, ct).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private async Task LoadOnceAsync(string target, string[] cols, DataTable data, LoadMode mode,
+        string[] keyCols, string? onPredicate, string source, string runId, string entity, CancellationToken ct)
+    {
+        DateTime started = DateTime.UtcNow;
+        string colList = string.Join(", ", cols.Select(Q));
 
         await using var conn = new SqlConnection(_cs);
         await conn.OpenAsync(ct).ConfigureAwait(false);
@@ -68,9 +107,12 @@ public sealed class WarehouseWriter
         {
             try
             {
+                // TABLOCK: the replace touches every row for this Source anyway, so take the
+                // table lock up front instead of escalating row locks mid-delete (faster and
+                // avoids lock-escalation contention with concurrent readers on big facts).
                 string sql = mode == LoadMode.Replace
-                    ? $"DELETE FROM {target} WHERE ISNULL(Source,'') = ISNULL(@src,''); " +
-                      $"INSERT INTO {target} ({colList}) SELECT {colList} FROM #stg;"
+                    ? $"DELETE FROM {target} WITH (TABLOCK) WHERE ISNULL(Source,'') = ISNULL(@src,''); " +
+                      $"INSERT INTO {target} WITH (TABLOCK) ({colList}) SELECT {colList} FROM #stg;"
                     : BuildUpsert(target, cols, keyCols, onPredicate!);
 
                 await using (var cmd = conn.CreateCommand())

@@ -5,7 +5,7 @@
 //
 //  getTeamsUserActivityUserDetail: per-user message / CALL / meeting counts +
 //  last activity. The call count is the real usage signal for a Teams Phone
-//  (MCOEV) seat — a number that took/made zero calls — which the binary "Teams
+//  (MCOEV) seat - a number that took/made zero calls - which the binary "Teams
 //  last activity" in the service-usage report cannot show. Same 302->CSV +
 //  concealment handling as the other usage-report connectors.
 // ============================================================

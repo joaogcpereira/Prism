@@ -1,9 +1,9 @@
 /* ============================================================================
-   PRISM — commercial seed  (tenant-specific; run AFTER schema/schema.sql)
+   PRISM - commercial seed  (tenant-specific; run AFTER schema/schema.sql)
 
    Loads Contoso's negotiated EUR unit prices into ref.SkuCost and the Enterprise
    Agreement contract quantities into ref.Contract. These are commercial figures
-   specific to Contoso's agreement — edit them to match your current contract.
+   specific to Contoso's agreement - edit them to match your current contract.
 
        sqlcmd -S <server>.database.windows.net -d prism -G -i schema/seed-commercial.sql
 
@@ -18,7 +18,7 @@
    ============================================================================ */
 
 /* ==========================================================================
-   NEGOTIATED PRICES — Contoso Final Offer (EUR/user/month) + 2026 list fallbacks
+   NEGOTIATED PRICES - Contoso Final Offer (EUR/user/month) + 2026 list fallbacks
    ========================================================================== */
 
 ;WITH price(NameLike, PartLike, MonthlyEUR, Origin) AS (
@@ -99,7 +99,7 @@ ORDER BY CASE WHEN c.MonthlyUnitCost IS NULL THEN 0 ELSE 1 END, s.DisplayName;
 GO
 
 /* ==========================================================================
-   PRICE GAPS — exact-part-number fills and free/consumption/capacity zeros
+   PRICE GAPS - exact-part-number fills and free/consumption/capacity zeros
    ========================================================================== */
 
 ;WITH g(SkuPartNumber, MonthlyEUR, Origin) AS (
@@ -163,7 +163,7 @@ ORDER BY s.DisplayName;
 GO
 
 /* ==========================================================================
-   CONTRACTS — Enterprise Agreement quantities & renewal date
+   CONTRACTS - Enterprise Agreement quantities & renewal date
    ========================================================================== */
 
 -- >>> set this to your real EA renewal / anniversary date <<<

@@ -33,6 +33,14 @@ internal sealed class Uploader : IDisposable
 {
     private const long MaxResponseBytes = 1 * 1024 * 1024;   // gateway replies are tiny; cap defensively
 
+    // v2 head-of-queue protection: a batch that keeps failing TRANSIENTLY must not block
+    // the drain forever. Each file gets an in-memory failure count with exponential
+    // backoff (60s doubling to 30min, jittered); past MaxTransientAttempts it moves to
+    // quarantine with a ".maxretries" marker and a loud event, and the queue moves on.
+    private const int  MaxTransientAttempts = 100;            // ~ a day of retries at max backoff
+    private const long BackoffBaseMs = 60_000, BackoffMaxMs = 30 * 60_000;
+    private readonly Dictionary<string, (int Fails, long NextAttemptTicks)> _fileState = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly UploaderConfig _cfg;
     private HttpClient? _http;
     private X509Certificate2? _cert;
@@ -70,10 +78,41 @@ internal sealed class Uploader : IDisposable
             return;
         }
 
+        ProbePrivateKey(_cert);   // v2: surface an inaccessible private key NOW, not as endless cryptic TLS failures
+
         _http = BuildClient(_cert);
         _cts  = new CancellationTokenSource();
         _loop = Task.Run(() => RunAsync(_cts.Token));
         LocalSink.Log($"Uploader started -> {_cfg.GatewayUrl} (device cert {_cert.Thumbprint}).", eventId: 301);
+    }
+
+    /// <summary>v2: attempt one tiny signature with the selected certificate's private key.
+    /// A SCEP/TPM cert whose key is ACLed to the enrolling user (not LocalSystem) loads
+    /// fine but fails at TLS handshake time with an opaque SChannel error - this probe
+    /// converts that into ONE clear, actionable event at startup. Failure never blocks
+    /// startup: batches keep spooling while the operator fixes key permissions.</summary>
+    private static void ProbePrivateKey(X509Certificate2 cert)
+    {
+        try
+        {
+            byte[] probe = new byte[16];
+            using (var rsa = cert.GetRSAPrivateKey())
+                if (rsa is not null)
+                {
+                    try { rsa.SignData(probe, System.Security.Cryptography.HashAlgorithmName.SHA256, System.Security.Cryptography.RSASignaturePadding.Pkcs1); }
+                    catch { rsa.SignData(probe, System.Security.Cryptography.HashAlgorithmName.SHA256, System.Security.Cryptography.RSASignaturePadding.Pss); }
+                    return;
+                }
+            using (var ecdsa = cert.GetECDsaPrivateKey())
+                if (ecdsa is not null) { ecdsa.SignData(probe, System.Security.Cryptography.HashAlgorithmName.SHA256); return; }
+        }
+        catch (Exception ex)
+        {
+            LocalSink.Log($"Device certificate {cert.Thumbprint}: private key is NOT usable by this service " +
+                          $"({ex.GetType().Name}). Uploads will fail until the key is accessible to LocalSystem " +
+                          "(machine key store, not a per-user container). Batches keep spooling meanwhile.",
+                          System.Diagnostics.EventLogEntryType.Error, eventId: 310);
+        }
     }
 
     private async Task RunAsync(CancellationToken ct)
@@ -107,22 +146,69 @@ internal sealed class Uploader : IDisposable
         catch { return; }
         Array.Sort(files, StringComparer.Ordinal);          // FIFO by timestamped name
 
+        // v2: prune ledger entries for files that no longer exist (delivered/pruned).
+        if (_fileState.Count > 0)
+        {
+            var live = new HashSet<string>(files, StringComparer.OrdinalIgnoreCase);
+            foreach (string k in _fileState.Keys.Where(k => !live.Contains(k)).ToList()) _fileState.Remove(k);
+        }
+
+        long now = Environment.TickCount64;
         int budget = Math.Max(1, _cfg.MaxBatchesPerCycle);
+        int consecutiveTransient = 0;
         foreach (string f in files)
         {
             if (ct.IsCancellationRequested) break;
-            if (budget-- <= 0) break;
-            if (!await UploadOneAsync(f, ct).ConfigureAwait(false)) break;  // stop on transient failure; retry next cycle
+            if (budget <= 0) break;
+
+            // v2 backoff: skip files still inside their retry window instead of
+            // hammering the same head-of-queue batch every cycle.
+            if (_fileState.TryGetValue(f, out var st) && now < st.NextAttemptTicks) continue;
+
+            budget--;
+            UploadResult r = await UploadOneAsync(f, ct).ConfigureAwait(false);
+            if (r == UploadResult.Delivered || r == UploadResult.Skipped) { _fileState.Remove(f); consecutiveTransient = 0; continue; }
+            if (r == UploadResult.Fatal) break;             // 401/403 or cancelled: affects everything; stop the cycle
+
+            // Transient: back off THIS file; after a few in a row, the gateway itself is
+            // down - stop the cycle rather than burning the whole budget on failures.
+            int fails = (_fileState.TryGetValue(f, out st) ? st.Fails : 0) + 1;
+            long delay = Math.Min(BackoffMaxMs, BackoffBaseMs << Math.Min(fails - 1, 5));
+            delay += Random.Shared.Next(0, 15_000);
+            _fileState[f] = (fails, now + delay);
+            if (fails >= MaxTransientAttempts)
+            {
+                _fileState.Remove(f);
+                QuarantineMaxRetries(f, fails);
+            }
+            if (++consecutiveTransient >= 3) break;
         }
     }
 
-    /// <returns>true to keep draining, false to stop this cycle (transient failure).</returns>
-    private async Task<bool> UploadOneAsync(string path, CancellationToken ct)
+    private enum UploadResult { Delivered, Skipped, Transient, Fatal }
+
+    private static void QuarantineMaxRetries(string path, int attempts)
+    {
+        try
+        {
+            string dest = Path.Combine(LocalSink.QuarantineDir, Path.GetFileNameWithoutExtension(path) + ".maxretries.json");
+            File.Move(path, dest, overwrite: true);
+            // Deliberately NOT rate-limited: giving up on data is exactly the event an
+            // operator must see, once per affected batch.
+            LocalSink.Log($"Giving up on {Path.GetFileName(path)} after {attempts} transient upload failures; " +
+                          $"moved to quarantine. Investigate gateway connectivity, then re-queue by moving the " +
+                          $"file back into the spool.", System.Diagnostics.EventLogEntryType.Warning, eventId: 311);
+            LocalSink.EnforceQuarantineCap();
+        }
+        catch { /* next cycle retries the move */ }
+    }
+
+    private async Task<UploadResult> UploadOneAsync(string path, CancellationToken ct)
     {
         byte[] body;
         try { body = await File.ReadAllBytesAsync(path, ct).ConfigureAwait(false); }
-        catch (OperationCanceledException) { return false; }
-        catch { return true; } // file vanished/locked; skip, keep going
+        catch (OperationCanceledException) { return UploadResult.Fatal; }
+        catch { return UploadResult.Skipped; } // file vanished/locked; skip, keep going
 
         // Usage JSON compresses ~10x; at fleet scale that is real egress. Gzip
         // anything non-trivial (the gateway decompresses on Content-Encoding).
@@ -137,12 +223,12 @@ internal sealed class Uploader : IDisposable
 
         HttpResponseMessage resp;
         try { resp = await _http!.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false); }
-        catch (OperationCanceledException) { return false; }
+        catch (OperationCanceledException) { return UploadResult.Fatal; }
         catch (Exception ex)
         {
             LocalSink.Log($"upload deferred ({Path.GetFileName(path)}): {Describe(ex)}",
                           System.Diagnostics.EventLogEntryType.Warning, 303);
-            return false; // gateway unreachable: stop, retry whole cycle later
+            return UploadResult.Transient; // gateway unreachable: back off this file
         }
 
         using (resp)
@@ -150,25 +236,30 @@ internal sealed class Uploader : IDisposable
             if (resp.IsSuccessStatusCode)
             {
                 TryDelete(path);
-                return true;
+                return UploadResult.Delivered;
             }
             if (IsPermanentReject(resp.StatusCode))
             {
                 Quarantine(path);
                 LocalSink.Log($"quarantined {Path.GetFileName(path)} (HTTP {(int)resp.StatusCode}).",
                               System.Diagnostics.EventLogEntryType.Warning, 304);
-                return true; // poison removed; continue with the rest
+                return UploadResult.Skipped; // poison removed; continue with the rest
             }
             if (resp.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
             {
                 LocalSink.Log($"upload rejected ({Path.GetFileName(path)}): HTTP {(int)resp.StatusCode} " +
                               "- check the device certificate / gateway authorization.",
                               System.Diagnostics.EventLogEntryType.Warning, 305);
-                return false; // likely affects all; stop this cycle
+                return UploadResult.Fatal; // likely affects all; stop this cycle
             }
+            // 429: honour the gateway's Retry-After for THIS file's next attempt window.
+            if (resp.StatusCode == HttpStatusCode.TooManyRequests
+                && resp.Headers.RetryAfter?.Delta is { } ra && ra > TimeSpan.Zero)
+                _fileState[path] = (_fileState.TryGetValue(path, out var st) ? st.Fails : 0,
+                                    Environment.TickCount64 + (long)Math.Min(ra.TotalMilliseconds, BackoffMaxMs));
             LocalSink.Log($"upload deferred ({Path.GetFileName(path)}): HTTP {(int)resp.StatusCode}.",
                           System.Diagnostics.EventLogEntryType.Warning, 306);
-            return false; // transient (5xx/429/etc.): retry later
+            return UploadResult.Transient; // transient (5xx/429/etc.): retry later with backoff
         }
     }
 
@@ -184,7 +275,7 @@ internal sealed class Uploader : IDisposable
 
     /// <summary>Exception TYPE chain for the event log. The size-trimmed AOT build replaces
     /// exception TEXT with resource keys ("net_http_client_execution_error"), but type names
-    /// survive — AuthenticationException vs SocketException vs TaskCanceledException tells an
+    /// survive - AuthenticationException vs SocketException vs TaskCanceledException tells an
     /// operator immediately whether it's TLS, network, or a timeout.</summary>
     private static string Describe(Exception ex)
     {
@@ -210,7 +301,7 @@ internal sealed class Uploader : IDisposable
     {
         var ssl = new SslClientAuthenticationOptions
         {
-            // TLS 1.2 ONLY — deliberate, not an oversight. TLS 1.3 requires the client-cert
+            // TLS 1.2 ONLY - deliberate, not an oversight. TLS 1.3 requires the client-cert
             // CertificateVerify signature to be RSA-PSS; device certs whose private key sits
             // in a legacy CSP (typical for AD CS SCEP templates) cannot produce PSS, and
             // SChannel then fails the handshake with "The message received was unexpected or
@@ -219,7 +310,7 @@ internal sealed class Uploader : IDisposable
             // supports. Revisit when the PKI issues KSP/CNG keys fleet-wide.
             EnabledSslProtocols = SslProtocols.Tls12,
             ClientCertificates  = new X509CertificateCollection { cert },
-            // Revocation: check online, but TOLERATE "could not check" — plant/office
+            // Revocation: check online, but TOLERATE "could not check" - plant/office
             // networks frequently block the CA's CRL/OCSP endpoints, and a strict
             // check would then fail every upload. A certificate that is actually
             // REVOKED, untrusted, expired or name-mismatched still hard-fails.
@@ -242,15 +333,23 @@ internal sealed class Uploader : IDisposable
         };
 
         // Optional server-cert pinning. Default (unset) = standard chain + name validation.
+        // v2: pinning is IN ADDITION to the tolerant chain check above, not instead of it -
+        // a pinned-but-REVOKED certificate (the exact scenario pinning exists to catch:
+        // a stolen key) must still fail. Only revocation-unreachable stays tolerated.
         if (!string.IsNullOrWhiteSpace(_cfg.ServerCertThumbprint))
         {
             string pin = _cfg.ServerCertThumbprint!.Replace(" ", "").Trim();
-            ssl.RemoteCertificateValidationCallback = (_, c, _, _) =>
+            RemoteCertificateValidationCallback chainCheck = ssl.RemoteCertificateValidationCallback!;
+            ssl.RemoteCertificateValidationCallback = (sender, c, chain, errors) =>
             {
                 if (c is not X509Certificate2 x) return false;
                 DateTime now = DateTime.Now;
                 bool dateOk = x.NotBefore <= now && now < x.NotAfter;
-                return dateOk && string.Equals(x.Thumbprint, pin, StringComparison.OrdinalIgnoreCase);
+                bool pinOk  = string.Equals(x.Thumbprint, pin, StringComparison.OrdinalIgnoreCase);
+                // Name mismatch is acceptable under a pin (private ingress hostnames);
+                // strip that flag, then apply the same tolerant chain policy as unpinned.
+                SslPolicyErrors chainErrors = errors & ~SslPolicyErrors.RemoteCertificateNameMismatch;
+                return dateOk && pinOk && chainCheck(sender, c, chain, chainErrors);
             };
         }
 

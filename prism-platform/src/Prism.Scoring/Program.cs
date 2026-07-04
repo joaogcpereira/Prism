@@ -43,6 +43,7 @@ try
     Dictionary<string, M365AppRow> officeByUser = await reader.ReadM365AppUsageAsync(ct);
     Dictionary<string, CopilotRow> copilotByUser = await reader.ReadCopilotUsageAsync(ct);
     Dictionary<string, TeamsActivityRow> teamsByUser = await reader.ReadTeamsActivityAsync(ct);
+    Dictionary<string, PstnRow> pstnByUser = await reader.ReadPstnUsageAsync(ct);
     List<SkuRow> skus = await reader.ReadSkuUtilizationAsync(ct);
     string currency = costs.Values.Select(v => v.Currency).FirstOrDefault() ?? "USD";
 
@@ -82,7 +83,8 @@ try
         OfficeAppsSignal? office = ResolveOffice(r, officeByUser, now, opts);
         CopilotSignal? copilot = ResolveCopilot(r, opts, copilotByUser, now);
         TeamsActivitySignal? teams = ResolveTeams(r, opts, teamsByUser);
-        AssignmentVerdict v = ScoringEngine.ScoreAssignment(r, app, install, mdeRun, webSignIn, office, copilot, teams, unitCost, cur, opts, now);
+        PstnSignal? pstn = ResolvePstn(r, opts, pstnByUser, now);
+        AssignmentVerdict v = ScoringEngine.ScoreAssignment(r, app, install, mdeRun, webSignIn, office, copilot, teams, pstn, unitCost, cur, opts, now);
 
         switch (v.Decision)
         {
@@ -94,7 +96,8 @@ try
         assignmentRows.Add(new VerdictWriter.AssignmentRow(
             r.UserId, r.SkuId, r.UserPrincipalName, r.DisplayName, r.SkuPartNumber, r.SkuName,
             v.Decision, v.Score, v.Confidence, Cap(string.Join(",", v.Reasons), 512), v.InactiveDays,
-            v.MonthlySavings, v.MonthlySavings is null ? null : cur, r.Department, r.Country));
+            v.MonthlySavings, v.MonthlySavings is null ? null : cur, r.Department, r.Country,
+            v.SignalCount, v.EvidenceJson));
     }
 
     // ---- score SKU idle seats ----
@@ -104,7 +107,7 @@ try
     {
         decimal? unitCost = costs.TryGetValue(s.SkuPartNumber ?? "", out var p) ? p.Cost : null;
         string cur = costs.TryGetValue(s.SkuPartNumber ?? "", out var p2) ? p2.Currency : currency;
-        // Free/viral plans often carry thousands of "idle" seats by design — never waste.
+        // Free/viral plans often carry thousands of "idle" seats by design - never waste.
         SkuSeatVerdict sv = ScoringEngine.IsFreeSku(s.SkuPartNumber, s.SkuName, unitCost, opts)
             ? new SkuSeatVerdict(Decision.Keep, [Reason.FreeSku], 0m)
             : ScoringEngine.ScoreSkuSeats(s.SeatsOwned, s.SeatsAssigned, unitCost, opts);
@@ -118,6 +121,15 @@ try
     var writer = new VerdictWriter(opts.ConnectionString, log);
     await writer.WriteAssignmentsAsync(assignmentRows, runId, now, ct);
     await writer.WriteSkusAsync(skuRows, runId, now, ct);
+
+    // v2: append this run's verdicts to the history (trend lines + vw.VerdictDelta's
+    // "what changed"), then purge history/load-log rows past retention so growth stays
+    // bounded. Both are best-effort: a purge hiccup must not fail a good scoring run.
+    if (assignmentRows.Count > 0)
+    {
+        await writer.AppendHistoryAsync(runId, ct);
+        await writer.PurgeRetentionAsync(opts.HistoryRetentionDays, opts.LoadRunRetentionDays, ct);
+    }
 
     // Guard against clobbering the dashboard KPIs with an all-zero summary when the read
     // returned nothing (a transient warehouse gap). The verdict tables are preserved by
@@ -169,7 +181,7 @@ static AppSignal? ResolveApp(SignalRow r, ScoringOptions o, Dictionary<string, L
 }
 
 // Resolve Defender Advanced Hunting run telemetry for an app-tied SKU (null = SKU not
-// app-tied, no hunting data this run, or the user has no MDE-visible devices — in which
+// app-tied, no hunting data this run, or the user has no MDE-visible devices - in which
 // case "no runs" is missing data, never evidence). Reuses the same SKU->exe mapping the
 // agent signal uses, so hunting and the agent always watch identical executables.
 static MdeRunSignal? ResolveMdeRun(SignalRow r, ScoringOptions o,
@@ -254,7 +266,7 @@ static OfficeAppsSignal? ResolveOffice(SignalRow r, Dictionary<string, M365AppRo
 
 // Resolve the Microsoft 365 Copilot usage signal (null = SKU isn't a Copilot SKU, or the
 // Copilot report didn't run this cycle). When the report ran, a Copilot-SKU user with no
-// activity row — or a row with no activity date — is an idle Copilot seat (HasReport=true).
+// activity row - or a row with no activity date - is an idle Copilot seat (HasReport=true).
 static CopilotSignal? ResolveCopilot(SignalRow r, ScoringOptions o,
     Dictionary<string, CopilotRow> copilotByUser, DateTime nowUtc)
 {
@@ -266,7 +278,7 @@ static CopilotSignal? ResolveCopilot(SignalRow r, ScoringOptions o,
         return new CopilotSignal(false, null, true);                       // report ran; no Copilot activity => idle seat
 
     int days = Math.Max(0, (int)(nowUtc - row.LastActivity.Value).TotalDays);
-    return new CopilotSignal(true, days, true);
+    return new CopilotSignal(true, days, true, row.SurfacesUsed);
 }
 
 // Resolve the Teams Phone usage signal (null = SKU isn't a Teams Phone SKU, or the Teams report
@@ -281,6 +293,22 @@ static TeamsActivitySignal? ResolveTeams(SignalRow r, ScoringOptions o,
     if (!teamsByUser.TryGetValue(r.UserId, out TeamsActivityRow? row))
         return new TeamsActivitySignal(0, 0, null, true);                   // report ran; no Teams activity => zero calls
     return new TeamsActivitySignal(row.CallCount, row.MeetingCount, row.LastActivity, true);
+}
+
+// v2: resolve the PSTN call-detail signal (null = SKU isn't phone-tied, or the PSTN connector
+// didn't run). When it ran, a phone-SKU user absent from the aggregate made zero PSTN calls -
+// that absence IS evidence (the log is tenant-complete for the window).
+static PstnSignal? ResolvePstn(SignalRow r, ScoringOptions o,
+    Dictionary<string, PstnRow> pstnByUser, DateTime nowUtc)
+{
+    if (pstnByUser.Count == 0) return null;                                 // connector didn't run
+    if (r.SkuPartNumber is null || !o.TeamsPhoneSkus.Contains(r.SkuPartNumber, StringComparer.OrdinalIgnoreCase)) return null;
+    if (string.IsNullOrEmpty(r.UserId)) return null;
+
+    if (!pstnByUser.TryGetValue(r.UserId, out PstnRow? row))
+        return new PstnSignal(0, 0, null, true);
+    int? days = row.LastCall is { } l ? Math.Max(0, (int)(nowUtc - l).TotalDays) : null;
+    return new PstnSignal(row.CallCount, row.TotalDurationSeconds, days, true);
 }
 
 // Resolve install evidence for an app-tied SKU (null = SKU not install-mapped, or no

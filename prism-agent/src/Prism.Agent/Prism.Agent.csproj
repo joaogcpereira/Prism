@@ -32,8 +32,8 @@
     <!-- Single source of version truth (surfaced via AgentInfo at runtime).
          Bump here; the batch AgentVersion, HTTP User-Agent, and the exe's file
          metadata all follow. -->
-    <Version>1.2.2</Version>
-    <InformationalVersion>1.2.2</InformationalVersion>
+    <Version>1.3.0-rc.1</Version>
+    <InformationalVersion>1.3.0-rc.1</InformationalVersion>
     <Company>Contoso</Company>
     <Product>Contoso Prism Agent</Product>
   </PropertyGroup>

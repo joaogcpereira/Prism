@@ -78,10 +78,19 @@ public sealed class DefenderClient : IDisposable
 
             HttpResponseMessage resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
 
+            // One-shot 401 retry (token expired in flight; re-fetch above refreshes it).
+            if (resp.StatusCode == HttpStatusCode.Unauthorized && attempt == 0)
+            {
+                _log.LogWarning("Defender API 401; refreshing the app token and retrying once.");
+                resp.Dispose();
+                continue;
+            }
+
             bool transient = resp.StatusCode == HttpStatusCode.TooManyRequests || (int)resp.StatusCode >= 500;
             if (!transient || attempt >= _maxRetries) return resp;
 
-            TimeSpan delay = resp.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(Math.Min(60, Math.Pow(2, attempt)));
+            TimeSpan delay = (resp.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(Math.Min(60, Math.Pow(2, attempt))))
+                             + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000));   // jitter
             _log.LogWarning("Defender API {Status}; retrying in {Delay}s (attempt {Attempt}/{Max}).",
                 (int)resp.StatusCode, (int)delay.TotalSeconds, attempt + 1, _maxRetries);
             resp.Dispose();

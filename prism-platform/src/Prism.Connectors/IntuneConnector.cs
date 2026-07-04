@@ -101,13 +101,13 @@ public sealed class IntuneConnector : IConnector
         // unconditionally; with ExpandAllInstalls the remaining inventory follows,
         // most-installed first, until the MaxInstallExpansions budget (one Graph call
         // per app) is spent. Store/UWP identity names ("Publisher.Package": a dot, no
-        // spaces — mirrors ref.AppExclusion) and zero-install rows are skipped, so the
+        // spaces - mirrors ref.AppExclusion) and zero-install rows are skipped, so the
         // budget is spent on apps the dashboard actually shows.
         string[] patterns = _opts.InstallVisibilityPatterns ?? [];
         bool Watched(FactDetectedApp a) => patterns.Any(p =>
             !string.IsNullOrEmpty(p) && a.DisplayName!.IndexOf(p, StringComparison.OrdinalIgnoreCase) >= 0);
 
-        // Intune's detected-app inventory is PER (app, version) — "Google Chrome" is
+        // Intune's detected-app inventory is PER (app, version) - "Google Chrome" is
         // dozens of rows, each with its own AppId. Selection therefore works per
         // APPLICATION NAME: an app is either fully expanded (every version-row) or
         // not expanded at all. Partially expanded apps made the dashboard's
@@ -127,7 +127,7 @@ public sealed class IntuneConnector : IConnector
         foreach (var g in groups)
         {
             int size = g.Count();
-            if (expandable.Count + size > cap && expandable.Count > 0) continue;   // app doesn't fit whole — skip it (smaller apps may still fit)
+            if (expandable.Count + size > cap && expandable.Count > 0) continue;   // app doesn't fit whole - skip it (smaller apps may still fit)
             expandable.AddRange(g);
             includedNames++;
             if (expandable.Count >= cap) break;
@@ -136,7 +136,7 @@ public sealed class IntuneConnector : IConnector
             _log.LogWarning("Install expansion cap ({Cap} version-rows) covers {In} of {All} application(s); " +
                 "raise Prism__MaxInstallExpansions to include the rest.", cap, includedNames, groups.Count);
         // Cadence gate: the full sweep can run weekly (e.g. Prism__ExpandInstallsDayOfWeek=Sunday).
-        // On other days the phase is skipped and fact.AppInstall keeps its last snapshot —
+        // On other days the phase is skipped and fact.AppInstall keeps its last snapshot -
         // the sink only REPLACEs when we actually write.
         string expandDay = (_opts.ExpandInstallsDayOfWeek ?? "").Trim();
         bool expandToday = expandDay.Length == 0
@@ -170,14 +170,14 @@ public sealed class IntuneConnector : IConnector
             {
                 if (!unlimited && sw.Elapsed.TotalSeconds > _opts.InstallExpansionTimeBudgetSeconds)
                 {
-                    _log.LogWarning("Install expansion time budget ({Secs}s) reached with {Left} request(s) left — " +
+                    _log.LogWarning("Install expansion time budget ({Secs}s) reached with {Left} request(s) left - " +
                         "writing what was gathered. Clear Prism__InstallExpansionTimeBudgetSeconds (0) to always run to completion.",
                         _opts.InstallExpansionTimeBudgetSeconds, pending.Count);
                     break;
                 }
 
-                // Positional batch ids ("0".."19") — robust regardless of how Graph
-                // echoes ids — mapped back to the dequeued items by index.
+                // Positional batch ids ("0".."19") - robust regardless of how Graph
+                // echoes ids - mapped back to the dequeued items by index.
                 var meta = new List<(FactDetectedApp App, string Url, int Attempts)>(20);
                 var chunk = new List<(string Id, string Url)>(20);
                 while (chunk.Count < 20 && pending.Count > 0)
@@ -230,7 +230,7 @@ public sealed class IntuneConnector : IConnector
                         }
                         else if (status == 429)
                         {
-                            // THROTTLED — never dropped. Re-queue (attempts unchanged) and honor
+                            // THROTTLED - never dropped. Re-queue (attempts unchanged) and honor
                             // this sub-response's Retry-After exactly; the pace widens below.
                             throttled = true;
                             pending.Enqueue((app, url, tries));
@@ -241,7 +241,7 @@ public sealed class IntuneConnector : IConnector
                             if (tries < hardAttemptCap) pending.Enqueue((app, url, tries + 1)); else dropped++;
                             waitSec = Math.Max(waitSec, ReadRetryAfter(r, 2));
                         }
-                        // other 4xx: app vanished between inventory and expansion — no rows, not retried.
+                        // other 4xx: app vanished between inventory and expansion - no rows, not retried.
                     }
                 }
 
@@ -297,7 +297,8 @@ public sealed class IntuneConnector : IConnector
             {
                 if (!string.Equals(prop.Name, "Retry-After", StringComparison.OrdinalIgnoreCase)) continue;
                 if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.String
-                    && double.TryParse(prop.Value.GetString(), out double s)) return s;
+                    && double.TryParse(prop.Value.GetString(), System.Globalization.NumberStyles.Float,
+                           System.Globalization.CultureInfo.InvariantCulture, out double s)) return s;
                 if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number
                     && prop.Value.TryGetDouble(out double n)) return n;
             }
@@ -321,7 +322,7 @@ public sealed class IntuneConnector : IConnector
         return pq;
     }
 
-    // Item 6 — Windows-only scope. Intune reports operatingSystem = "Windows" for
+    // Item 6 - Windows-only scope. Intune reports operatingSystem = "Windows" for
     // desktops, laptops, and servers alike, so a Windows prefix (minus the mobile
     // variants) is the right inclusion test.
     private static bool IsWindowsEndpoint(string? os)

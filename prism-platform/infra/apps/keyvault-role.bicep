@@ -1,11 +1,11 @@
 // =============================================================================
-// apps/keyvault-role.bicep  —  grant a built-in role on an EXISTING Key Vault
+// apps/keyvault-role.bicep  -  grant a built-in role on an EXISTING Key Vault
 // -----------------------------------------------------------------------------
 // Deployed as a MODULE so the role assignment lands in the VAULT'S resource
 // group, which may differ from the apps' resource group. (A role assignment is
 // created at the scope it targets; a resource-group deployment can only write
 // into its own RG, so a cross-RG grant must go through a module scoped to that
-// other resource group — see main.bicep, which sets scope: resourceGroup(...).)
+// other resource group - see main.bicep, which sets scope: resourceGroup(...).)
 //
 // In Prism's case the apps live in 'dev-prism' but the assigned Key Vault
 // (contoso-prism-dev) lives in the shared 'dev-prism-shr'.

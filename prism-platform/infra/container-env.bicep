@@ -1,5 +1,5 @@
 // =============================================================================
-// modules/container-env.bicep  —  Prism Container Apps managed environment
+// modules/container-env.bicep  -  Prism Container Apps managed environment
 // -----------------------------------------------------------------------------
 // PAA (Private Application Architecture) compliant:
 //   * VNet-injected into the dedicated "cae" subnet (delegated to

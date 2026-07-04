@@ -1,5 +1,5 @@
 // =============================================================================
-// apps/main.bicep  —  Prism (AppID 0001) PHASE 2 application deployment
+// apps/main.bicep  -  Prism (AppID 0001) PHASE 2 application deployment
 // -----------------------------------------------------------------------------
 // Publishes the four Prism workloads INTO the resources created in Phase 1:
 //   1. prism-gateway    Container App  (HTTP ingress :8080, device-agent mTLS)
@@ -11,12 +11,12 @@
 // Those already exist from Phase 1 (infra/main.bicep). Here we only REFERENCE
 // them (by name) so the apps land in the existing internal VLAN-injected
 // environment, pull from the existing private ACR, and reach SQL over the
-// existing Private Endpoint — all with the shared user-assigned managed
+// existing Private Endpoint - all with the shared user-assigned managed
 // identity (secret-free Entra auth; no passwords, no registry credentials).
 //
 // DEPLOY TARGET: the SAME resource group as Phase 1 (e.g. 'dev-prism'), which is
 // where the environment, ACR and SQL live. (The "dev-" env-token rule from
-// Phase 1 does not apply here — these names are explicit, not token-derived.)
+// Phase 1 does not apply here - these names are explicit, not token-derived.)
 //
 // PREREQUISITE (one-time, not expressible in Bicep): the shared managed
 // identity must have a contained DB user in the Prism database with
@@ -231,7 +231,7 @@ module keyVaultSecretsUser './keyvault-role.bicep' = if (grantKeyVaultAccess) {
 }
 
 // ============================================================================ //
-//  Modules — the four Prism objects                                            //
+//  Modules - the four Prism objects                                            //
 // ============================================================================ //
 
 // --- 1. prism-gateway (Container App, mTLS ingestion) ----------------------- //

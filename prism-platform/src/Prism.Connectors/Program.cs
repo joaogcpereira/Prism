@@ -137,6 +137,16 @@ builder.Services.AddSingleton<PriceConnector>(sp =>
         sp.GetRequiredService<AzureTokenProvider>(),
         opts, runId,
         sp.GetRequiredService<ILogger<PriceConnector>>()));
+// v2 signal connectors (each gates itself on its Enable* option and skips cleanly).
+builder.Services.AddSingleton<MailboxSettingsConnector>(sp =>
+    new MailboxSettingsConnector(sp.GetRequiredService<GraphClient>(), sp.GetRequiredService<IIngestionSink>(),
+        opts, runId, sp.GetRequiredService<ILogger<MailboxSettingsConnector>>()));
+builder.Services.AddSingleton<PstnConnector>(sp =>
+    new PstnConnector(sp.GetRequiredService<GraphClient>(), sp.GetRequiredService<IIngestionSink>(),
+        opts, runId, sp.GetRequiredService<ILogger<PstnConnector>>()));
+builder.Services.AddSingleton<AuthMethodsConnector>(sp =>
+    new AuthMethodsConnector(sp.GetRequiredService<GraphClient>(), sp.GetRequiredService<IIngestionSink>(),
+        opts, runId, sp.GetRequiredService<ILogger<AuthMethodsConnector>>()));
 
 using IHost host = builder.Build();
 ILogger log = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Prism.Connectors");
@@ -164,6 +174,9 @@ IConnector[] all =
     host.Services.GetRequiredService<MdeSoftwareConnector>(),
     host.Services.GetRequiredService<MdeHuntingConnector>(),
     host.Services.GetRequiredService<PriceConnector>(),
+    host.Services.GetRequiredService<MailboxSettingsConnector>(),
+    host.Services.GetRequiredService<PstnConnector>(),
+    host.Services.GetRequiredService<AuthMethodsConnector>(),
 ];
 IConnector[] toRun = opts.Enabled is { Length: > 0 }
     ? all.Where(c => opts.Enabled.Contains(c.Name, StringComparer.OrdinalIgnoreCase)).ToArray()
@@ -187,23 +200,38 @@ else
 {
     log.LogInformation("No artificial run deadline — running to completion (honoring Graph Retry-After).");
 }
+// Bounded-parallel execution (v2). Graph throttles per app+tenant, so unbounded
+// fan-out would just convert wall-clock time into 429s; a modest bound (default 3)
+// overlaps the report-download connectors' idle wait with the paging-heavy ones and
+// roughly halves a full run. MaxConcurrentConnectors=1 restores strict sequencing.
+// The invariants stay: one connector failing never aborts the rest, every failure is
+// attributed by name, and the exit code reflects any failure.
 int failures = 0;
-
-foreach (IConnector connector in toRun)
+var failed = new System.Collections.Concurrent.ConcurrentBag<string>();
+using (var gate = new SemaphoreSlim(Math.Max(1, opts.MaxConcurrentConnectors)))
 {
-    try
+    Task[] tasks = toRun.Select(async connector =>
     {
-        log.LogInformation("== connector: {Name} ==", connector.Name);
-        await connector.RunAsync(cts.Token);
-    }
-    catch (Exception ex)
-    {
-        failures++;
-        // One connector failing doesn't abort the rest - partial data is still useful.
-        log.LogError(ex, "Connector {Name} FAILED: {Message}", connector.Name, ex.Message);
-    }
+        await gate.WaitAsync(cts.Token);
+        try
+        {
+            log.LogInformation("== connector: {Name} ==", connector.Name);
+            await connector.RunAsync(cts.Token);
+            log.LogInformation("== connector: {Name} done ==", connector.Name);
+        }
+        catch (Exception ex)
+        {
+            Interlocked.Increment(ref failures);
+            failed.Add(connector.Name);
+            // One connector failing doesn't abort the rest - partial data is still useful.
+            log.LogError(ex, "Connector {Name} FAILED: {Message}", connector.Name, ex.Message);
+        }
+        finally { gate.Release(); }
+    }).ToArray();
+    await Task.WhenAll(tasks);
 }
 
 if (failures == 0) { log.LogInformation("Run {RunId} completed ({Count} connector(s)).", runId, toRun.Length); return 0; }
-log.LogError("Run {RunId} completed with {Failures} failed connector(s).", runId, failures);
+log.LogError("Run {RunId} completed with {Failures} failed connector(s): {Names}.",
+    runId, failures, string.Join(", ", failed));
 return 1;

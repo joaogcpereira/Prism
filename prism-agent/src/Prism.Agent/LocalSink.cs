@@ -108,9 +108,19 @@ internal static class LocalSink
                 File.WriteAllBytes(tmp, payload);
                 File.Move(tmp, final, overwrite: true); // atomic publish on the same volume
             }
-            catch
+            catch (Exception ex)
             {
                 try { File.Delete(tmp); } catch { }
+                // v2: a failed spool write means REAL data loss (the tracker already got its
+                // ACK) - that must be visible, not silent. Rate-limited via the spool-warn
+                // window so a full disk can't itself flood the event log.
+                DateTime nowUtc = DateTime.UtcNow;
+                if (nowUtc - s_lastSpoolWarnUtc >= SpoolWarnInterval)
+                {
+                    s_lastSpoolWarnUtc = nowUtc;
+                    Log($"FAILED to spool a usage batch ({ex.GetType().Name}) - that batch is lost. " +
+                        "Check disk space / ACLs on " + SpoolDir, EventLogEntryType.Error, eventId: 112);
+                }
             }
 
             EnforceSpoolCaps();
@@ -120,7 +130,7 @@ internal static class LocalSink
     /// <summary>
     /// Lock %ProgramData%\Prism\Agent down to SYSTEM + Administrators (inheritance
     /// disabled). ProgramData's default ACL would let ANY local user read other
-    /// users' spooled usage batches AND drop forged *.json files into the spool —
+    /// users' spooled usage batches AND drop forged *.json files into the spool -
     /// which the uploader would then deliver to the gateway as if the agent
     /// produced them. The service runs as LocalSystem, so it can always apply this;
     /// in console/dev mode (non-admin) the attempt just logs a warning.

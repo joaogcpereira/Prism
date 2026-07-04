@@ -37,13 +37,13 @@ public sealed class ScoringOptions
 
     // "Never used since assignment": when the assignment is at least this old and NO
     // activity has ever been recorded on any signal, the dormancy evidence is the
-    // entitlement age itself (score 92, still REVIEW/MEDIUM — absence of telemetry
+    // entitlement age itself (score 92, still REVIEW/MEDIUM - absence of telemetry
     // never auto-reclaims).
     public int NeverUsedAssignmentAgeDays { get; set; } = 90;
 
     // Depth-of-use: an otherwise-active holder of a HighValue SKU whose M365 report shows
     // activity in at most one workload (of Teams/Exchange/OneDrive/SharePoint) in the
-    // window gets SHALLOW_USE — a right-size (downgrade) candidate, never a reclaim.
+    // window gets SHALLOW_USE - a right-size (downgrade) candidate, never a reclaim.
     public bool EnableShallowUseFlag { get; set; } = true;
     public int ShallowUseWindowDays { get; set; } = 30;
 
@@ -77,7 +77,7 @@ public sealed class ScoringOptions
     // ---- Wave 3.2: usage-based reclaim of app-tied add-ons -----------------
     // When the agent has reliably reported a device (>= AppUnusedMinCoverageDays
     // distinct reporting days in the 90-day window) yet the SKU's mapped exe never
-    // ran, reclaim that add-on seat regardless of sign-in activity — the licensed
+    // ran, reclaim that add-on seat regardless of sign-in activity - the licensed
     // app itself is the usage truth ("holds Visio, 0 foreground in 90d").
     //
     // OFF by default: surface the candidates first via vw.LicenceUsage on real
@@ -96,12 +96,12 @@ public sealed class ScoringOptions
     // installs AND usage. Signals produced:
     //  * APP_NOT_INSTALLED       seat assigned, title absent from ALL the user's
     //                            inventoried devices => strongest reclaim candidate.
-    //  * INSTALL_CORROBORATED    installed AND the agent proved it unused — two
+    //  * INSTALL_CORROBORATED    installed AND the agent proved it unused - two
     //                            independent sources agree => higher confidence.
     //  * INSTALLED_NO_USAGE_TELEMETRY  installed but no agent coverage => context
     //                            for the review queue.
     // Absence is only treated as evidence when an inventory actually SEES the user's
-    // devices (vw.UserInstallCoverage) — absence of telemetry never auto-reclaims.
+    // devices (vw.UserInstallCoverage) - absence of telemetry never auto-reclaims.
 
     // SKU -> software-title fragments matched (contains, case-insensitive) against
     // install names from BOTH sources (Intune DisplayName, e.g. "Microsoft Visio
@@ -126,7 +126,7 @@ public sealed class ScoringOptions
 
     // ---- Wave 8: web/service usage (Entra per-app sign-ins) ----------------
     // For WEB/SERVICE-first SKUs the desktop signals (agent, MDE, M365-Apps report)
-    // are blind — a Power BI Pro user who only opens the browser looks unused to all
+    // are blind - a Power BI Pro user who only opens the browser looks unused to all
     // of them. A recent sign-in to the SKU's service application is direct usage
     // evidence (=> KEEP); its absence on a sign-in-covered user corroborates unused.
     // SKU part number -> the service application id(s) whose sign-ins count as usage.
@@ -158,4 +158,10 @@ public sealed class ScoringOptions
     // flags (EnableTeamsPhoneReclaim off => REVIEW; on => RECLAIM after vetting on real data).
     public string[] TeamsPhoneSkus { get; set; } = ["MCOEV", "PHONESYSTEM_VIRTUALUSER"];
     public bool EnableTeamsPhoneReclaim { get; set; } = false;
+
+    // ---- v2: retention (bounded growth for the append-only artifacts) ------
+    // score.VerdictHistory keeps per-seat verdicts per run for trends and the
+    // "what changed" delta; meta.LoadRun logs every load. Purged after each run.
+    public int HistoryRetentionDays { get; set; } = 400;
+    public int LoadRunRetentionDays { get; set; } = 180;
 }

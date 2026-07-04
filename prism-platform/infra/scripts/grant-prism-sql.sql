@@ -1,5 +1,5 @@
 -- ============================================================================
--- grant-prism-sql.sql  —  Prism (AppID 0001)
+-- grant-prism-sql.sql  -  Prism (AppID 0001)
 -- ----------------------------------------------------------------------------
 -- Creates the contained database user for the Prism user-assigned managed
 -- identity and grants it the access the jobs/apps need:
@@ -8,7 +8,7 @@
 --
 -- HOW TO RUN
 --   * Connect to the PRISM DATABASE (not master) on contoso-prism-sql-dev as the
---     Entra admin (e.g. sqladmin@contoso.com — the AAD admin set in Phase 1).
+--     Entra admin (e.g. sqladmin@contoso.com - the AAD admin set in Phase 1).
 --   * The SQL server has public network access DISABLED, so connect from inside
 --     the VNet: a jump box / Bastion VM, a self-hosted agent, or a peered network
 --     that can reach the Private Endpoint. (A temporary public firewall exception

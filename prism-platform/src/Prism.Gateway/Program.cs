@@ -90,14 +90,27 @@ else
 builder.Services.AddRateLimiter(rl =>
 {
     rl.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    // Honest Retry-After (seconds until the fixed window resets) turns a hot
+    // client's hammering into polite backoff: the agent's uploader treats 429
+    // as transient and honours the header on its next cycle.
+    rl.OnRejected = (rej, _) =>
+    {
+        string retry = rej.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan after)
+            ? Math.Max(1, (int)Math.Ceiling(after.TotalSeconds)).ToString()
+            : "60";
+        rej.HttpContext.Response.Headers.RetryAfter = retry;
+        return ValueTask.CompletedTask;
+    };
     rl.AddPolicy("per-device", ctx =>
     {
         string key = RateKey(ctx, opts);
         return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = opts.RateLimitPermitPerMinute,
+            PermitLimit = Math.Max(1, opts.RateLimitPerMinute),
             Window = TimeSpan.FromMinutes(1),
-            QueueLimit = 0
+            // Burst = queue depth for over-limit requests. Default 0: reject
+            // immediately (429 + Retry-After) rather than parking connections.
+            QueueLimit = Math.Max(0, opts.RateLimitBurst)
         });
     });
 });
@@ -107,10 +120,41 @@ var app = builder.Build();
 if (isDevCert)
     app.Logger.LogWarning("Using a self-signed DEV server certificate (localhost). Configure Gateway:ServerCertificatePath for production.");
 
+// Baseline security headers on EVERY response. Stamped before the rest of the
+// pipeline runs, so rate-limit 429s and Problem responses carry them too. The
+// gateway serves machines, not browsers, so this is cheap defence-in-depth
+// against anything (or anyone) probing it with one. The Server header is
+// already suppressed at the Kestrel level (AddServerHeader = false).
+app.Use(async (ctx, next) =>
+{
+    IHeaderDictionary h = ctx.Response.Headers;
+    h["X-Content-Type-Options"] = "nosniff";     // never MIME-sniff a response into something active
+    h["X-Frame-Options"]        = "DENY";        // nothing here is frameable content
+    h["Referrer-Policy"]        = "no-referrer";
+    h["Cache-Control"]          = "no-store";    // usage payloads/acks must never be cached
+    await next();
+});
+
 app.UseRateLimiter();
 
-// Open liveness probe (no client cert) for load balancers / orchestrators.
+// Open probes for load balancers / orchestrators. Neither the client-cert gate
+// (an endpoint filter attached to the ingest endpoint only) nor the rate-limit
+// policy applies here, so probes need no certificate and can never be starved
+// by a chatty fleet. In direct mode Kestrel only REQUESTS a client cert
+// (AllowCertificate), so a probe without one still completes the handshake.
+//
+// /healthz: pure process liveness. Deliberately touches NO database and NO
+// filesystem - it must stay green while a dependency is down so the
+// orchestrator restarts the container only when the process itself is wedged.
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
+
+// /readyz: liveness + a light dependency probe (SELECT 1 with a 3s budget when
+// Sink=warehouse; landing-directory existence for the file sink). 503 tells the
+// orchestrator to hold traffic while the dependency is unavailable.
+app.MapGet("/readyz", async (HttpContext ctx) =>
+    await ProbeReadyAsync(opts, app.Logger, ctx.RequestAborted)
+        ? Results.Ok(new { status = "ready" })
+        : Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "dependency unavailable"));
 
 // Cert-gated ingestion.
 var api = app.MapGroup("/api/v1");
@@ -118,7 +162,7 @@ api.MapPost("/usage", IngestHandler.HandleAsync)
    .AddEndpointFilter<ClientCertEndpointFilter>()
    .RequireRateLimiting("per-device");
 
-app.Logger.LogInformation("Prism gateway listening on {Scheme}://0.0.0.0:{Port}  (POST /api/v1/usage){Mode}",
+app.Logger.LogInformation("Prism gateway listening on {Scheme}://0.0.0.0:{Port}  (POST /api/v1/usage; GET /healthz, /readyz){Mode}",
     opts.BehindIngress ? "http" : "https", opts.Port,
     opts.BehindIngress ? "  [behind ingress: client cert via XFCC]" : "");
 app.Run();
@@ -150,6 +194,37 @@ static string StableHash(string s)
     ulong h = 1469598103934665603UL;
     foreach (char c in s) { h ^= c; h *= 1099511628211UL; }
     return h.ToString("x");
+}
+
+// Readiness probe body: liveness plus ONE light dependency check. Warehouse sink →
+// SELECT 1 with a hard 3-second budget (a paused serverless database or an auth
+// failure reports "not ready" instead of hanging the probe); file sink → the landing
+// directory exists and is writable. Never throws: any failure is just "not ready".
+static async Task<bool> ProbeReadyAsync(GatewayOptions opts, ILogger log, CancellationToken ct)
+{
+    try
+    {
+        if (opts.Sink.Equals("warehouse", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(opts.ConnectionString)) return false;
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromSeconds(3));
+            await using var conn = new Microsoft.Data.SqlClient.SqlConnection(opts.ConnectionString);
+            await conn.OpenAsync(timeout.Token);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT 1";
+            cmd.CommandTimeout = 3;
+            await cmd.ExecuteScalarAsync(timeout.Token);
+            return true;
+        }
+        Directory.CreateDirectory(opts.LandingDirectory);
+        return true;
+    }
+    catch (Exception ex)
+    {
+        log.LogWarning("readiness probe failed: {Message}", ex.Message);
+        return false;
+    }
 }
 
 // --------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 using './main.bicep'
 
 // =============================================================================
-// Prism (AppID 0001) — consolidated parameters for the orchestrated deployment.
+// Prism (AppID 0001) - consolidated parameters for the orchestrated deployment.
 // Values carried verbatim from containerregistry.bicepparam + sqldatabase.bicepparam.
 // Deploy target: a resource group whose name STARTS WITH 'dev-' (so the modules'
 // environment token resolves to 'dev'). The pipeline enforces this.
@@ -18,7 +18,7 @@ param acrName = 'contosoprismacr'
 param acrPrivateEndpointSubnetResourceId = '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-network-internal-non-prd-001/providers/Microsoft.Network/virtualNetworks/vnet-internal-non-prd/subnets/dev-prism-svc'
 
 // AcrPull for the Container Apps' shared UAMI. Paste the UAMI's OBJECT (principal)
-// id — NOT its client id. Leave commented to deploy the registry without the grant.
+// id - NOT its client id. Leave commented to deploy the registry without the grant.
 // param acrPullPrincipalId = '33333333-3333-3333-3333-333333333333'
 
 // ---- Container Apps environment --------------------------------------------

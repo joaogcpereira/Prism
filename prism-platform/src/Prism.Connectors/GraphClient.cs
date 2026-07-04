@@ -47,17 +47,20 @@ public sealed class GraphClient : IDisposable
         _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
     }
 
-    /// <summary>Stream every item across all pages of a Graph list endpoint.</summary>
+    /// <summary>Stream every item across all pages of a Graph list endpoint.
+    /// <paramref name="headers"/> lets callers add request headers (e.g.
+    /// "ConsistencyLevel: eventual" for $count/$filter advanced queries).</summary>
     public async IAsyncEnumerable<TItem> GetPagedAsync<TPage, TItem>(
         string relativeUrl,
         JsonTypeInfo<TPage> typeInfo,
         Func<TPage, (IEnumerable<TItem>? Items, string? NextLink)> select,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default,
+        IReadOnlyDictionary<string, string>? headers = null)
     {
         string? url = relativeUrl;
         while (!string.IsNullOrEmpty(url))
         {
-            using HttpResponseMessage resp = await SendWithRetryAsync(url, ct).ConfigureAwait(false);
+            using HttpResponseMessage resp = await SendWithRetryAsync(url, ct, headers).ConfigureAwait(false);
             resp.EnsureSuccessStatusCode();
 
             await using Stream s = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
@@ -123,7 +126,7 @@ public sealed class GraphClient : IDisposable
     /// document ({"responses":[{id,status,headers,body},...]}). The OUTER call retries
     /// on 429/5xx honoring Retry-After; INNER per-request 429s are the caller's to
     /// handle (each inner response carries its own status / Retry-After header).
-    /// Hand-built JSON + JsonDocument parsing — no new serializer types needed.
+    /// Hand-built JSON + JsonDocument parsing - no new serializer types needed.
     /// </summary>
     public async Task<JsonDocument> PostBatchAsync(IReadOnlyList<(string Id, string Url)> requests, CancellationToken ct)
     {
@@ -182,7 +185,8 @@ public sealed class GraphClient : IDisposable
         }
     }
 
-    private async Task<HttpResponseMessage> SendWithRetryAsync(string url, CancellationToken ct)
+    private async Task<HttpResponseMessage> SendWithRetryAsync(string url, CancellationToken ct,
+        IReadOnlyDictionary<string, string>? headers = null)
     {
         for (int attempt = 0; ; attempt++)
         {
@@ -190,6 +194,8 @@ public sealed class GraphClient : IDisposable
                 url.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? new Uri(url) : new Uri(_http.BaseAddress!, url));
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer",
                 await _tokens.GetTokenAsync(AzureTokenProvider.GraphScope, ct).ConfigureAwait(false));
+            if (headers is not null)
+                foreach ((string k, string v) in headers) req.Headers.TryAddWithoutValidation(k, v);
 
             HttpResponseMessage resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
 
@@ -205,7 +211,9 @@ public sealed class GraphClient : IDisposable
             int ceiling = throttled ? _throttleMaxRetries : _maxRetries;
             if ((!throttled && !server) || attempt >= ceiling) return resp;
 
-            TimeSpan delay = throttled ? ThrottleDelay(resp) : BackoffDelay(attempt);
+            // 503/504 frequently carry Retry-After too - honoring it beats blind backoff.
+            TimeSpan delay = throttled || resp.Headers.RetryAfter is not null
+                ? ThrottleDelay(resp) : BackoffDelay(attempt);
             _log.LogWarning("Graph {Status} on {Url}; waiting {Delay}s then retry (attempt {Attempt}/{Max}).",
                 (int)resp.StatusCode, url, (int)delay.TotalSeconds, attempt + 1, ceiling);
             resp.Dispose();
@@ -213,8 +221,10 @@ public sealed class GraphClient : IDisposable
         }
     }
 
-    // Honor 429 Retry-After exactly: delta-seconds or an HTTP-date, clamped to the
-    // configured ceiling so a pathological header can't park the run for hours.
+    // Honor Retry-After exactly (429, and 5xx when the service sends one): delta-seconds
+    // or an HTTP-date, clamped to the configured ceiling so a pathological header can't
+    // park the run for hours. Jittered so a fleet of parallel loops doesn't re-arrive in
+    // lockstep the moment the window opens (thundering herd).
     private TimeSpan ThrottleDelay(HttpResponseMessage resp)
     {
         TimeSpan d;
@@ -223,12 +233,15 @@ public sealed class GraphClient : IDisposable
         else d = TimeSpan.FromSeconds(5);
         if (d < TimeSpan.Zero) d = TimeSpan.FromSeconds(5);
         TimeSpan cap = TimeSpan.FromSeconds(_maxRetryAfterSeconds);
-        return d > cap ? cap : d;
+        if (d > cap) d = cap;
+        return d + TimeSpan.FromMilliseconds(Random.Shared.Next(250, 1500));
     }
 
-    // Exponential backoff for 5xx (capped at 60s).
+    // Exponential backoff for 5xx (capped at 60s) with full jitter on the step - parallel
+    // connectors must decorrelate, not retry in synchronized waves.
     private static TimeSpan BackoffDelay(int attempt) =>
-        TimeSpan.FromSeconds(Math.Min(60, Math.Pow(2, attempt)));
+        TimeSpan.FromSeconds(Math.Min(60, Math.Pow(2, attempt)))
+        + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000));
 
     public void Dispose() => _http.Dispose();
 }

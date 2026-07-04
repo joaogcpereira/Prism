@@ -132,6 +132,7 @@ internal sealed class SessionLauncher
                         flags, env, nint.Zero, in si, out SessionNative.PROCESS_INFORMATION pi))
                 {
                     _sessionPid[sessionId] = (int)pi.dwProcessId;
+                    _sessionLaunchTicks[sessionId] = Environment.TickCount64;   // v2: liveness baseline
                     LocalSink.Log($"Launched session tracker in session {sessionId} (pid {pi.dwProcessId}).", eventId: 200);
                     SessionNative.CloseHandle(pi.hProcess);
                     SessionNative.CloseHandle(pi.hThread);
@@ -153,9 +154,47 @@ internal sealed class SessionLauncher
         }
     }
 
+    // v2: when each session's tracker last shipped a batch (baseline = launch time).
+    private readonly Dictionary<uint, long> _sessionLaunchTicks = new();
+
+    /// <summary>
+    /// v2 liveness: restart trackers that are ALIVE as processes but SILENT on the pipe.
+    /// IsAlive() only proves the process exists; a wedged tracker passes that check and
+    /// silently stops measuring. A healthy tracker ships every ~5 minutes, so one that
+    /// has said nothing for <paramref name="silentAfterMs"/> (well past several ship
+    /// intervals) is presumed hung: kill + relaunch. Sessions that have not yet made
+    /// FIRST contact get <paramref name="firstContactGraceMs"/> from launch (logon storms,
+    /// profile load) before the same treatment.
+    /// </summary>
+    public void RestartSilentTrackers(Func<uint, long?> lastContact, long silentAfterMs, long firstContactGraceMs)
+    {
+        var restart = new List<uint>();
+        long now = Environment.TickCount64;
+        lock (_gate)
+        {
+            foreach ((uint sid, int pid) in _sessionPid)
+            {
+                if (!IsAlive(pid)) continue;                       // dead → normal relaunch path handles it
+                long started = _sessionLaunchTicks.TryGetValue(sid, out long t) ? t : now;
+                long? lc = lastContact(sid);
+                bool silent = lc is { } c ? (now - Math.Max(c, started)) > silentAfterMs
+                                          : (now - started) > firstContactGraceMs;
+                if (silent) restart.Add(sid);
+            }
+        }
+        foreach (uint sid in restart)
+        {
+            LocalSink.Log($"Session {sid} tracker is alive but has shipped nothing for too long - restarting it.",
+                          System.Diagnostics.EventLogEntryType.Warning, eventId: 202);
+            StopSession(sid);
+            UsagePipeServer.ForgetSessionContact(sid);
+            LaunchInSession(sid);
+        }
+    }
+
     public void ForgetSession(uint sessionId)
     {
-        lock (_gate) { _sessionPid.Remove(sessionId); }
+        lock (_gate) { _sessionPid.Remove(sessionId); _sessionLaunchTicks.Remove(sessionId); }
     }
 
     /// <summary>Terminate the tracker spawned into a single session (e.g. on logoff).</summary>
@@ -165,6 +204,7 @@ internal sealed class SessionLauncher
         {
             if (_sessionPid.TryGetValue(sessionId, out int pid)) Kill(pid);
             _sessionPid.Remove(sessionId);
+            _sessionLaunchTicks.Remove(sessionId);
         }
     }
 

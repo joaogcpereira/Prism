@@ -1,12 +1,19 @@
 /* ============================================================================
-   PRISM — consolidated warehouse schema  (Azure SQL Database)
+   PRISM - consolidated warehouse schema  ·  Release 1.0.0-rc.1  (Azure SQL)
 
-   The complete, idempotent, dependency-ordered definition of the Prism data
-   warehouse: every schema, table, index, analytic view and the curated product
-   reference data the views build on. Run this ONE file to stand up (or fully
-   refresh) the database — it is safe to re-run at any time.
+   THE single source of truth for the Prism data warehouse: every schema,
+   table, index, analytic view and the curated product reference data the
+   views build on - one dependency-ordered file. It is idempotent AND
+   self-upgrading: tables are creation-guarded, later-release columns are
+   guarded ALTER ADDs, superseded indexes drop-and-recreate under their
+   current names, and views use CREATE OR ALTER. Running this one file
+   therefore stands up a NEW database and upgrades an EXISTING one alike.
 
        sqlcmd -S <server>.database.windows.net -d prism -G -i schema/schema.sql
+
+   Upgrading a pre-release (preview) database? Run schema/migrate-v2.sql once
+   AFTER this file - it backfills computed data and seeds the verdict-history
+   baseline (details in that file). Fresh deployments never need it.
 
    Tenant-specific commercial data (negotiated unit prices and EA contract
    quantities) lives in schema/seed-commercial.sql, which you run afterwards.
@@ -34,7 +41,7 @@ IF SCHEMA_ID('vw')    IS NULL EXEC('CREATE SCHEMA vw');
 GO
 
 /* ==========================================================================
-   CORE — schemas, dimensions, current-state & time-series facts, load log
+   CORE - schemas, dimensions, current-state & time-series facts, load log
    ========================================================================== */
 
 /* ---------------------------------------------------------------------------
@@ -59,16 +66,32 @@ CREATE TABLE dim.[User]
     LastSuccessfulSignInDateTime      datetime2(3)   NULL,
     SecurityIdentifier                nvarchar(128)  NULL,
     OnPremisesSecurityIdentifier      nvarchar(128)  NULL,
+    UserType                          nvarchar(32)   NULL,   -- Member | Guest (paid SKU on a Guest = governance flag)
+    OnPremisesSyncEnabled             bit            NULL,   -- hybrid-synced account (explains AD-derived SIDs)
     Source                            nvarchar(64)   NULL,
     RunId                             nvarchar(40)   NULL,
     SnapshotUtc                       datetime2(3)   NULL,
     LoadedUtc                         datetime2(3)   NOT NULL CONSTRAINT DF_dim_User_Loaded DEFAULT sysutcdatetime()
 );
 GO
+-- v2 columns (self-migrating adds for databases created before them)
+IF COL_LENGTH('dim.[User]','UserType') IS NULL              ALTER TABLE dim.[User] ADD UserType nvarchar(32) NULL;
+IF COL_LENGTH('dim.[User]','OnPremisesSyncEnabled') IS NULL ALTER TABLE dim.[User] ADD OnPremisesSyncEnabled bit NULL;
+GO
 IF IndexProperty(OBJECT_ID('dim.[User]'),'IX_User_Upn','IndexID') IS NULL
     CREATE INDEX IX_User_Upn     ON dim.[User](UserPrincipalName);
 IF IndexProperty(OBJECT_ID('dim.[User]'),'IX_User_Enabled','IndexID') IS NULL
     CREATE INDEX IX_User_Enabled ON dim.[User](AccountEnabled) INCLUDE (LastSignInDateTime);
+-- v2: SID lookups feed vw.AppUsageByUser90's agent-usage attribution; DisplayName /
+-- Department serve the command-palette LIKE search without a full table scan.
+IF IndexProperty(OBJECT_ID('dim.[User]'),'IX_User_Sid','IndexID') IS NULL
+    CREATE INDEX IX_User_Sid        ON dim.[User](SecurityIdentifier)          WHERE SecurityIdentifier IS NOT NULL;
+IF IndexProperty(OBJECT_ID('dim.[User]'),'IX_User_OnPremSid','IndexID') IS NULL
+    CREATE INDEX IX_User_OnPremSid  ON dim.[User](OnPremisesSecurityIdentifier) WHERE OnPremisesSecurityIdentifier IS NOT NULL;
+IF IndexProperty(OBJECT_ID('dim.[User]'),'IX_User_DisplayName','IndexID') IS NULL
+    CREATE INDEX IX_User_DisplayName ON dim.[User](DisplayName);
+IF IndexProperty(OBJECT_ID('dim.[User]'),'IX_User_Department','IndexID') IS NULL
+    CREATE INDEX IX_User_Department  ON dim.[User](Department) INCLUDE (DisplayName, JobTitle);
 GO
 
 IF OBJECT_ID('dim.Sku') IS NULL
@@ -117,6 +140,11 @@ IF IndexProperty(OBJECT_ID('dim.Device'),'IX_Device_User','IndexID') IS NULL
     CREATE INDEX IX_Device_User ON dim.Device(UserId);
 IF IndexProperty(OBJECT_ID('dim.Device'),'IX_Device_Upn','IndexID') IS NULL
     CREATE INDEX IX_Device_Upn  ON dim.Device(UserPrincipalName);
+-- v2: DeviceName is the join key for the agent correlation (vw.AppUsageCorrelated),
+-- the MDE DNS-host match (vw.SoftwareInstallByUser) and the device drill - all of
+-- which previously scanned the table.
+IF IndexProperty(OBJECT_ID('dim.Device'),'IX_Device_Name','IndexID') IS NULL
+    CREATE INDEX IX_Device_Name ON dim.Device(DeviceName) INCLUDE (UserId, UserPrincipalName, OperatingSystem, ComplianceState);
 GO
 
 /* ---------------------------------------------------------------------------
@@ -134,6 +162,7 @@ CREATE TABLE fact.LicenseAssignment
     State                    nvarchar(32)  NULL,
     LastUpdatedDateTime      datetime2(3)  NULL,
     DisabledServicePlanIds   nvarchar(max) NULL,
+    DisabledPlanCount        int           NULL,   -- materialised by the sink; saves per-row OPENJSON in vw.LicenseSignals
     Source                   nvarchar(64)  NULL,
     RunId                    nvarchar(40)  NULL,
     SnapshotUtc              datetime2(3)  NULL,
@@ -141,8 +170,16 @@ CREATE TABLE fact.LicenseAssignment
     CONSTRAINT PK_fact_LicenseAssignment PRIMARY KEY (UserId, SkuId)
 );
 GO
-IF IndexProperty(OBJECT_ID('fact.LicenseAssignment'),'IX_LA_Sku','IndexID') IS NULL
-    CREATE INDEX IX_LA_Sku ON fact.LicenseAssignment(SkuId);
+IF COL_LENGTH('fact.LicenseAssignment','DisabledPlanCount') IS NULL
+    ALTER TABLE fact.LicenseAssignment ADD DisabledPlanCount int NULL;
+GO
+-- v2: widened to a covering index - the SKU drill and per-SKU rollups project these
+-- columns, and the old key-only index forced a lookup per row.
+IF IndexProperty(OBJECT_ID('fact.LicenseAssignment'),'IX_LA_Sku','IndexID') IS NOT NULL
+    DROP INDEX IX_LA_Sku ON fact.LicenseAssignment;
+IF IndexProperty(OBJECT_ID('fact.LicenseAssignment'),'IX_LA_Sku_v2','IndexID') IS NULL
+    CREATE INDEX IX_LA_Sku_v2 ON fact.LicenseAssignment(SkuId)
+        INCLUDE (UserId, SkuPartNumber, AssignedDirectly, State, LastUpdatedDateTime);
 GO
 
 IF OBJECT_ID('fact.ServiceUsage') IS NULL
@@ -175,8 +212,15 @@ CREATE TABLE fact.ServiceUsage
     LoadedUtc                  datetime2(3)  NOT NULL CONSTRAINT DF_fact_SU_Loaded DEFAULT sysutcdatetime()
 );
 GO
-IF IndexProperty(OBJECT_ID('fact.ServiceUsage'),'IX_SU_Upn','IndexID') IS NULL
-    CREATE INDEX IX_SU_Upn ON fact.ServiceUsage(UserPrincipalName);
+-- v2: vw.LicenseSignals joins this table by UPN and projects the workload dates for
+-- EVERY licensed seat on EVERY scoring run - the old key-only index caused a RID
+-- lookup per assignment. The covering replacement serves the whole view from one seek.
+IF IndexProperty(OBJECT_ID('fact.ServiceUsage'),'IX_SU_Upn','IndexID') IS NOT NULL
+    DROP INDEX IX_SU_Upn ON fact.ServiceUsage;
+IF IndexProperty(OBJECT_ID('fact.ServiceUsage'),'IX_SU_Upn_v2','IndexID') IS NULL
+    CREATE INDEX IX_SU_Upn_v2 ON fact.ServiceUsage(UserPrincipalName)
+        INCLUDE (LastActivityAnyDate, TeamsLastActivityDate, ExchangeLastActivityDate,
+                 OneDriveLastActivityDate, SharePointLastActivityDate, ReportRefreshDate, Concealed);
 GO
 
 IF OBJECT_ID('fact.DetectedApp') IS NULL
@@ -196,6 +240,13 @@ CREATE TABLE fact.DetectedApp
     LoadedUtc      datetime2(3)  NOT NULL CONSTRAINT DF_fact_DA_Loaded DEFAULT sysutcdatetime()
 );
 GO
+-- v2: the watched-apps estate (LIKE match), the app drill and the palette search all
+-- probe DisplayName; AppId serves the version join from vw.AppInstall.
+IF IndexProperty(OBJECT_ID('fact.DetectedApp'),'IX_DetectedApp_Name','IndexID') IS NULL
+    CREATE INDEX IX_DetectedApp_Name  ON fact.DetectedApp(DisplayName) INCLUDE (Publisher, [Version], Platform, DeviceCount);
+IF IndexProperty(OBJECT_ID('fact.DetectedApp'),'IX_DetectedApp_AppId','IndexID') IS NULL
+    CREATE INDEX IX_DetectedApp_AppId ON fact.DetectedApp(AppId) INCLUDE ([Version]);
+GO
 
 -- Item 4: per-device application installs (which devices/users have an app),
 -- populated by the Intune connector for licensing-relevant apps (bounded by
@@ -214,6 +265,15 @@ CREATE TABLE fact.AppInstall
     SnapshotUtc       datetime2(3)  NULL,
     LoadedUtc         datetime2(3)  NOT NULL CONSTRAINT DF_fact_AI_Loaded DEFAULT sysutcdatetime()
 );
+GO
+-- v2: per-device install expansion is read three ways - by device (install-coverage
+-- EXISTS probes + device drill), by app name (app drill) and by user (install signal).
+IF IndexProperty(OBJECT_ID('fact.AppInstall'),'IX_AppInstall_Device','IndexID') IS NULL
+    CREATE INDEX IX_AppInstall_Device ON fact.AppInstall(DeviceId)     INCLUDE (DisplayName);
+IF IndexProperty(OBJECT_ID('fact.AppInstall'),'IX_AppInstall_Name','IndexID') IS NULL
+    CREATE INDEX IX_AppInstall_Name   ON fact.AppInstall(DisplayName)  INCLUDE (DeviceName, UserPrincipalName, AppId);
+IF IndexProperty(OBJECT_ID('fact.AppInstall'),'IX_AppInstall_Upn','IndexID') IS NULL
+    CREATE INDEX IX_AppInstall_Upn    ON fact.AppInstall(UserPrincipalName) INCLUDE (DisplayName);
 GO
 
 IF OBJECT_ID('fact.DiscoveredApp') IS NULL
@@ -303,6 +363,10 @@ IF IndexProperty(OBJECT_ID('fact.AppUsage'),'IX_AU_Date','IndexID') IS NULL
     CREATE INDEX IX_AU_Date ON fact.AppUsage([Date]) INCLUDE (ForegroundActiveSeconds);
 IF IndexProperty(OBJECT_ID('fact.AppUsage'),'IX_AU_Sid','IndexID') IS NULL
     CREATE INDEX IX_AU_Sid  ON fact.AppUsage(UserSid);
+-- v2: vw.AppUsageByUser90 slices the last 90 days per SID and aggregates per exe -
+-- (UserSid, Date) with the projected measure columns serves it without touching the heap.
+IF IndexProperty(OBJECT_ID('fact.AppUsage'),'IX_AU_SidDate','IndexID') IS NULL
+    CREATE INDEX IX_AU_SidDate ON fact.AppUsage(UserSid, [Date]) INCLUDE (ExePath, MachineName, ForegroundActiveSeconds);
 GO
 
 /* ---------------------------------------------------------------------------
@@ -324,6 +388,25 @@ CREATE TABLE meta.LoadRun
     Message      nvarchar(512) NULL
 );
 GO
+-- v2: the data-health page reads "latest load per (source, entity)" and per-run rollups.
+IF IndexProperty(OBJECT_ID('meta.LoadRun'),'IX_LoadRun_Entity','IndexID') IS NULL
+    CREATE INDEX IX_LoadRun_Entity ON meta.LoadRun(Entity, StartedUtc DESC) INCLUDE (Source, Mode, [RowCount], Status, CompletedUtc);
+IF IndexProperty(OBJECT_ID('meta.LoadRun'),'IX_LoadRun_Run','IndexID') IS NULL
+    CREATE INDEX IX_LoadRun_Run    ON meta.LoadRun(RunId) INCLUDE (Entity, Status);
+GO
+
+/* ---------------------------------------------------------------------------
+   CONNECTOR STATE  (delta links / watermarks so incremental pulls survive restarts)
+   --------------------------------------------------------------------------- */
+
+IF OBJECT_ID('meta.ConnectorState') IS NULL
+CREATE TABLE meta.ConnectorState
+(
+    ConnectorName nvarchar(64)   NOT NULL CONSTRAINT PK_meta_ConnectorState PRIMARY KEY,
+    Watermark     nvarchar(max)  NULL,      -- delta token, high-water timestamp, or JSON cursor
+    UpdatedUtc    datetime2(3)   NOT NULL CONSTRAINT DF_meta_CS_Upd DEFAULT sysutcdatetime()
+);
+GO
 
 /* ---------------------------------------------------------------------------
    ANALYTIC VIEWS  (the seam the scoring engine + dashboard build on)
@@ -343,13 +426,11 @@ SELECT
 FROM dim.Sku s;
 GO
 
--- vw.LicenseSignals is owned by schema/scoring.sql (run AFTER this file). That file
--- defines the extended shape the scoring engine reads (CreatedDateTime,
--- EmployeeLeaveDateTime, LastNonInteractiveSignInDateTime, AssignmentLastUpdatedDateTime,
--- Country, ...). A legacy copy used to live HERE too; because both used CREATE OR ALTER,
--- re-running schema.sql after scoring.sql silently reverted the view and broke scoring
--- with "Invalid column name 'CreatedDateTime'" (etc.). Single owner now — do not
--- redefine the view in this file.
+-- vw.LicenseSignals - the scoring engine's primary input - is defined ONCE, in the
+-- SCORING section below. (Historical note: a second copy once lived in a separate
+-- scoring.sql; dual CREATE OR ALTER owners silently reverted each other and broke
+-- scoring. This consolidated file is now the single owner - never redefine the view
+-- anywhere else.)
 
 -- Per (user, app) desktop foreground usage over the last 30 days, from the agent.
 CREATE OR ALTER VIEW vw.AppUsageLast30 AS
@@ -368,11 +449,11 @@ GROUP BY UserSid, ExePath;
 GO
 
 /* ==========================================================================
-   SCORING — cost map, SKU descriptions, verdict tables, license-signals view
+   SCORING - cost map, SKU descriptions, verdict tables, license-signals view
    ========================================================================== */
 
 /* ---- editable cost map (populated by the pricing connector or by hand) ----
-   Prices are NOT hardcoded here — they change and they're tenant-specific. They
+   Prices are NOT hardcoded here - they change and they're tenant-specific. They
    are loaded by the pricing.skucost connector from your negotiated Price Sheet
    API (per currency, current month), or maintained manually (Origin='manual').
    See PRICING.md. A SKU with no row simply yields no savings figure (it is still
@@ -393,7 +474,7 @@ CREATE TABLE ref.SkuCost
 GO
 
 /* ---- human-readable SKU descriptions (shown in the license drill) ----------
-   Curated offline (Microsoft product naming is stable); maintain freely — the
+   Curated offline (Microsoft product naming is stable); maintain freely - the
    dashboard shows whatever is here, unmatched SKUs simply show no blurb. */
 IF OBJECT_ID('ref.SkuDescription') IS NULL
 CREATE TABLE ref.SkuDescription
@@ -405,39 +486,39 @@ CREATE TABLE ref.SkuDescription
 GO
 MERGE ref.SkuDescription AS t
 USING (SELECT * FROM (VALUES
- (N'SPE_E3',           N'Microsoft 365 E3: the full enterprise suite — Office desktop apps (Word, Excel, PowerPoint, Outlook), Exchange Online, Teams, SharePoint, OneDrive (1 TB+), Windows Enterprise upgrade rights, Intune device management and Entra ID P1 identity. The standard knowledge-worker license.'),
- (N'SPE_E5',           N'Microsoft 365 E5: everything in E3 plus the advanced security stack (Defender for Office/Endpoint/Identity), Entra ID P2, advanced compliance/eDiscovery, Power BI Pro and Teams Phone with audio conferencing. The premium tier — typically justified by security or analytics use.'),
- (N'ENTERPRISEPACK',   N'Office 365 E3: Office desktop apps plus Exchange, Teams, SharePoint and OneDrive — without the Windows license, Intune and Entra P1 that Microsoft 365 E3 adds.'),
+ (N'SPE_E3',           N'Microsoft 365 E3: the full enterprise suite - Office desktop apps (Word, Excel, PowerPoint, Outlook), Exchange Online, Teams, SharePoint, OneDrive (1 TB+), Windows Enterprise upgrade rights, Intune device management and Entra ID P1 identity. The standard knowledge-worker license.'),
+ (N'SPE_E5',           N'Microsoft 365 E5: everything in E3 plus the advanced security stack (Defender for Office/Endpoint/Identity), Entra ID P2, advanced compliance/eDiscovery, Power BI Pro and Teams Phone with audio conferencing. The premium tier - typically justified by security or analytics use.'),
+ (N'ENTERPRISEPACK',   N'Office 365 E3: Office desktop apps plus Exchange, Teams, SharePoint and OneDrive - without the Windows license, Intune and Entra P1 that Microsoft 365 E3 adds.'),
  (N'STANDARDPACK',     N'Office 365 E1: web/mobile-only Office, Exchange (50 GB), Teams, SharePoint and OneDrive. No desktop Office installs.'),
- (N'DESKLESSPACK',     N'Office 365 F3: frontline-worker plan — web/mobile Office, 2 GB mailbox, Teams and SharePoint with kiosk-level limits.'),
- (N'SPE_F1',           N'Microsoft 365 F3: frontline-worker suite — web/mobile Office, Teams, 2 GB Exchange mailbox, Windows Enterprise rights and Intune, designed for shift/plant workers without a desk.'),
- (N'M365_F1_COMM',     N'Microsoft 365 F1: the lightest frontline plan — Teams, SharePoint and web Office viewing (no user mailbox by default).'),
- (N'SPB',              N'Microsoft 365 Business Premium: SMB suite (max 300 seats) — desktop Office, Exchange, Teams, SharePoint plus Intune and Defender for Business.'),
+ (N'DESKLESSPACK',     N'Office 365 F3: frontline-worker plan - web/mobile Office, 2 GB mailbox, Teams and SharePoint with kiosk-level limits.'),
+ (N'SPE_F1',           N'Microsoft 365 F3: frontline-worker suite - web/mobile Office, Teams, 2 GB Exchange mailbox, Windows Enterprise rights and Intune, designed for shift/plant workers without a desk.'),
+ (N'M365_F1_COMM',     N'Microsoft 365 F1: the lightest frontline plan - Teams, SharePoint and web Office viewing (no user mailbox by default).'),
+ (N'SPB',              N'Microsoft 365 Business Premium: SMB suite (max 300 seats) - desktop Office, Exchange, Teams, SharePoint plus Intune and Defender for Business.'),
  (N'Microsoft_365_Copilot', N'Microsoft 365 Copilot: the AI assistant add-on embedded in Word, Excel, PowerPoint, Outlook and Teams, grounded in the tenant''s data via Microsoft Graph. Requires an underlying M365 license; priced per user.'),
  (N'POWER_BI_PRO',     N'Power BI Pro: publish, share and collaborate on Power BI reports and dashboards. Needed to share content with others; viewing shared content also requires Pro (unless hosted in Premium capacity).'),
  (N'PBI_PREMIUM_PER_USER', N'Power BI Premium Per User: everything in Pro plus paginated reports, larger models, more frequent refresh and AI features, per user instead of per capacity.'),
- (N'POWER_BI_STANDARD', N'Power BI (free): personal authoring and viewing of own content only — cannot share or consume shared workspaces. Costs nothing; never waste.'),
- (N'VISIOCLIENT',      N'Visio Plan 2: the full Visio desktop app plus Visio for the web — diagramming, BPMN, org charts, with Office integration.'),
- (N'PROJECTPROFESSIONAL', N'Project Plan 3: Project desktop app and Project for the web — schedules, resources, roadmaps; the standard PM license.'),
+ (N'POWER_BI_STANDARD', N'Power BI (free): personal authoring and viewing of own content only - cannot share or consume shared workspaces. Costs nothing; never waste.'),
+ (N'VISIOCLIENT',      N'Visio Plan 2: the full Visio desktop app plus Visio for the web - diagramming, BPMN, org charts, with Office integration.'),
+ (N'PROJECTPROFESSIONAL', N'Project Plan 3: Project desktop app and Project for the web - schedules, resources, roadmaps; the standard PM license.'),
  (N'PROJECTPREMIUM',   N'Project Plan 5: Plan 3 plus portfolio selection/optimisation, demand management and enterprise resource planning.'),
- (N'EMS',              N'Enterprise Mobility + Security E3: Entra ID P1, Intune, Azure Information Protection P1 and Advanced Threat Analytics — the identity/device bundle that overlaps with Microsoft 365 E3.'),
+ (N'EMS',              N'Enterprise Mobility + Security E3: Entra ID P1, Intune, Azure Information Protection P1 and Advanced Threat Analytics - the identity/device bundle that overlaps with Microsoft 365 E3.'),
  (N'EMSPREMIUM',       N'Enterprise Mobility + Security E5: EMS E3 plus Entra ID P2 (PIM, risk-based Conditional Access), Defender for Identity, AIP P2 and Defender for Cloud Apps.'),
  (N'AAD_PREMIUM',      N'Microsoft Entra ID P1: Conditional Access, group-based licensing, self-service password reset, hybrid identity (whole-tenant capability; per-user licensed).'),
  (N'AAD_PREMIUM_P2',   N'Microsoft Entra ID P2: P1 plus Privileged Identity Management, Identity Protection (risk policies) and access reviews.'),
- (N'IDENTITY_THREAT_PROTECTION', N'Microsoft 365 E5 Security: the E5 security stack as an add-on to E3 — Defender for Endpoint/Office/Identity, Entra ID P2 and Defender for Cloud Apps.'),
- (N'INFORMATION_PROTECTION_COMPLIANCE', N'Microsoft 365 E5 Compliance: the E5 compliance stack as an add-on to E3 — advanced eDiscovery/audit, insider risk, records management and information protection.'),
+ (N'IDENTITY_THREAT_PROTECTION', N'Microsoft 365 E5 Security: the E5 security stack as an add-on to E3 - Defender for Endpoint/Office/Identity, Entra ID P2 and Defender for Cloud Apps.'),
+ (N'INFORMATION_PROTECTION_COMPLIANCE', N'Microsoft 365 E5 Compliance: the E5 compliance stack as an add-on to E3 - advanced eDiscovery/audit, insider risk, records management and information protection.'),
  (N'SPE_F5_SEC',       N'Microsoft 365 F5 Security add-on: brings the E5-grade security stack (Defender suite, Entra ID P2) to frontline F1/F3 users.'),
- (N'MCOEV',            N'Microsoft Teams Phone Standard: turns Teams into a PBX — call control, voicemail, transfer/forwarding. Calling plans or operator connect are separate.'),
+ (N'MCOEV',            N'Microsoft Teams Phone Standard: turns Teams into a PBX - call control, voicemail, transfer/forwarding. Calling plans or operator connect are separate.'),
  (N'MCOPSTNC',         N'Communications Credits: pay-as-you-go balance for dial-out/toll-free in Teams audio conferencing and calling. Consumption-based; the "seat" count is not a per-user license.'),
  (N'Microsoft_Teams_Audio_Conferencing_select_dial_out', N'Teams Audio Conferencing (select dial-out): lets meeting organisers include dial-in numbers / limited dial-out in Teams meetings. Zero-cost add-on in most agreements.'),
- (N'DYN365_ENTERPRISE_CUSTOMER_SERVICE', N'Dynamics 365 Customer Service Enterprise: the full case-management/omnichannel service-desk application with SLAs, entitlements, knowledge base and Copilot features. One of the costlier per-seat licenses — service accounts holding it deserve scrutiny.'),
- (N'WIN10_VDA_E3',     N'Windows Enterprise E3 (VDA): Windows Enterprise upgrade + virtualisation access rights per user. Usually bundled inside Microsoft 365 E3 — standalone copies alongside M365 E3 are typically redundant.'),
+ (N'DYN365_ENTERPRISE_CUSTOMER_SERVICE', N'Dynamics 365 Customer Service Enterprise: the full case-management/omnichannel service-desk application with SLAs, entitlements, knowledge base and Copilot features. One of the costlier per-seat licenses - service accounts holding it deserve scrutiny.'),
+ (N'WIN10_VDA_E3',     N'Windows Enterprise E3 (VDA): Windows Enterprise upgrade + virtualisation access rights per user. Usually bundled inside Microsoft 365 E3 - standalone copies alongside M365 E3 are typically redundant.'),
  (N'WIN10_VDA_E5',     N'Windows Enterprise E5 (VDA): Windows E3 rights plus Defender for Endpoint P2. Bundled inside Microsoft 365 E5; standalone copies alongside M365 E5 are typically redundant.'),
  (N'FLOW_FREE',        N'Power Automate (free): personal flows with standard connectors. Costs nothing; never waste.'),
  (N'POWERAPPS_VIRAL',  N'Power Apps (viral/trial plan): self-service sign-up plan with no cost. Never waste.'),
  (N'STREAM',           N'Microsoft Stream (classic seat): video portal access, included with most M365 suites at no separate cost.'),
- (N'EXCHANGESTANDARD', N'Exchange Online Plan 1: a 50 GB cloud mailbox without the rest of the suite — common for service/shared scenarios.'),
- (N'EXCHANGEENTERPRISE', N'Exchange Online Plan 2: 100 GB mailbox plus litigation hold and DLP — required for unlimited archiving and legal hold.')
+ (N'EXCHANGESTANDARD', N'Exchange Online Plan 1: a 50 GB cloud mailbox without the rest of the suite - common for service/shared scenarios.'),
+ (N'EXCHANGEENTERPRISE', N'Exchange Online Plan 2: 100 GB mailbox plus litigation hold and DLP - required for unlimited archiving and legal hold.')
 ) v(SkuPartNumber, Description)) s
 ON  t.SkuPartNumber = s.SkuPartNumber
 WHEN MATCHED THEN UPDATE SET Description = s.Description, UpdatedUtc = sysutcdatetime()
@@ -447,7 +528,7 @@ GO
 /* ---- operator-supplied descriptions (2026-06-11) ---------------------------
    Provided by Contoso IM; this MERGE runs AFTER the baseline seed above, so these
    take precedence on overlapping keys. Part numbers marked (inferred) had none in
-   the source list and use Microsoft's standard skuPartNumber — verify against
+   the source list and use Microsoft's standard skuPartNumber - verify against
    dim.Sku if one doesn't match. */
 MERGE ref.SkuDescription AS t
 USING (SELECT * FROM (VALUES
@@ -524,14 +605,28 @@ CREATE TABLE score.AssignmentVerdict
     Currency              nvarchar(8)   NULL,
     Department            nvarchar(128) NULL,
     Country               nvarchar(16)  NULL,
+    SignalCount           int           NULL,           -- v2: independent signal sources consulted for this seat
+    EvidenceJson          nvarchar(2000) NULL,          -- v2: compact per-signal evidence trail (dashboard drawer)
     Source                nvarchar(64)  NULL,
     RunId                 nvarchar(40)  NULL,
     ScoredUtc             datetime2(3)  NOT NULL CONSTRAINT DF_score_AV_Scored DEFAULT sysutcdatetime(),
     CONSTRAINT PK_score_AssignmentVerdict PRIMARY KEY (UserId, SkuId)
 );
 GO
-IF IndexProperty(OBJECT_ID('score.AssignmentVerdict'),'IX_AV_Verdict','IndexID') IS NULL
-    CREATE INDEX IX_AV_Verdict ON score.AssignmentVerdict(Verdict) INCLUDE (EstMonthlySavings);
+IF COL_LENGTH('score.AssignmentVerdict','SignalCount')  IS NULL ALTER TABLE score.AssignmentVerdict ADD SignalCount int NULL;
+IF COL_LENGTH('score.AssignmentVerdict','EvidenceJson') IS NULL ALTER TABLE score.AssignmentVerdict ADD EvidenceJson nvarchar(2000) NULL;
+GO
+-- v2: the review queue orders by savings within a verdict; the user/SKU drills filter
+-- by their respective keys. Covering indexes serve all three without heap lookups.
+IF IndexProperty(OBJECT_ID('score.AssignmentVerdict'),'IX_AV_Verdict','IndexID') IS NOT NULL
+    DROP INDEX IX_AV_Verdict ON score.AssignmentVerdict;
+IF IndexProperty(OBJECT_ID('score.AssignmentVerdict'),'IX_AV_Verdict_v2','IndexID') IS NULL
+    CREATE INDEX IX_AV_Verdict_v2 ON score.AssignmentVerdict(Verdict)
+        INCLUDE (UserPrincipalName, DisplayName, SkuPartNumber, SkuName, WasteScore, Confidence,
+                 EstMonthlySavings, EffectiveInactiveDays, Department, Country);
+IF IndexProperty(OBJECT_ID('score.AssignmentVerdict'),'IX_AV_SkuPart','IndexID') IS NULL
+    CREATE INDEX IX_AV_SkuPart ON score.AssignmentVerdict(SkuPartNumber)
+        INCLUDE (Verdict, EstMonthlySavings, Department, Country, EffectiveInactiveDays);
 GO
 
 IF OBJECT_ID('score.SkuVerdict') IS NULL
@@ -552,6 +647,10 @@ CREATE TABLE score.SkuVerdict
     ScoredUtc         datetime2(3)  NOT NULL CONSTRAINT DF_score_SV_Scored DEFAULT sysutcdatetime()
 );
 GO
+-- v2: the SKU drill keys by part number; make that lookup a seek (unique where present).
+IF IndexProperty(OBJECT_ID('score.SkuVerdict'),'IX_SV_Part','IndexID') IS NULL
+    CREATE UNIQUE INDEX IX_SV_Part ON score.SkuVerdict(SkuPartNumber) WHERE SkuPartNumber IS NOT NULL;
+GO
 
 IF OBJECT_ID('score.RunSummary') IS NULL
 CREATE TABLE score.RunSummary
@@ -567,6 +666,38 @@ CREATE TABLE score.RunSummary
     IdleSeatMonthlySavings  decimal(14,2) NULL,
     Currency                nvarchar(8)   NULL
 );
+GO
+-- v2: /api/summary (TOP 1 ORDER BY ScoredUtc DESC) and the trend chart both sort on this.
+IF IndexProperty(OBJECT_ID('score.RunSummary'),'IX_RunSummary_Scored','IndexID') IS NULL
+    CREATE INDEX IX_RunSummary_Scored ON score.RunSummary(ScoredUtc DESC);
+GO
+
+/* ---- verdict history (append-only; one row per seat per scoring run) -------
+   Powers trend lines, "what changed since the last run" (vw.VerdictDelta) and
+   flap analysis. The scoring job appends each run and purges rows older than
+   its retention window (default 400 days) so growth stays bounded. */
+IF OBJECT_ID('score.VerdictHistory') IS NULL
+CREATE TABLE score.VerdictHistory
+(
+    VerdictHistoryId  bigint IDENTITY(1,1) CONSTRAINT PK_score_VerdictHistory PRIMARY KEY,
+    RunId             nvarchar(40)  NOT NULL,
+    ScoredUtc         datetime2(3)  NOT NULL,
+    UserId            nvarchar(64)  NOT NULL,
+    SkuId             nvarchar(64)  NOT NULL,
+    SkuPartNumber     nvarchar(128) NULL,
+    Verdict           nvarchar(16)  NULL,
+    WasteScore        int           NULL,
+    Confidence        nvarchar(8)   NULL,
+    ReasonCodes       nvarchar(512) NULL,
+    EstMonthlySavings decimal(12,2) NULL
+);
+GO
+IF IndexProperty(OBJECT_ID('score.VerdictHistory'),'IX_VH_Seat','IndexID') IS NULL
+    CREATE INDEX IX_VH_Seat ON score.VerdictHistory(UserId, SkuId, ScoredUtc DESC) INCLUDE (Verdict, WasteScore, EstMonthlySavings);
+IF IndexProperty(OBJECT_ID('score.VerdictHistory'),'IX_VH_Run','IndexID') IS NULL
+    CREATE INDEX IX_VH_Run  ON score.VerdictHistory(RunId) INCLUDE (Verdict, EstMonthlySavings);
+IF IndexProperty(OBJECT_ID('score.VerdictHistory'),'IX_VH_Scored','IndexID') IS NULL
+    CREATE INDEX IX_VH_Scored ON score.VerdictHistory(ScoredUtc);
 GO
 
 /* ---- extended signals view (raw fields; the engine computes day-deltas) -- */
@@ -584,7 +715,10 @@ SELECT
     u.DisplayName,
     u.AccountEnabled,
     u.Department,
+    u.JobTitle,
     u.UsageLocation                   AS Country,
+    u.UserType,                                       -- v2: Member | Guest
+    u.OnPremisesSyncEnabled,                          -- v2: hybrid provenance
     u.EmployeeHireDate,
     u.CreatedDateTime,
     u.EmployeeLeaveDateTime,
@@ -608,25 +742,93 @@ SELECT
     su.SharePointLastActivityDate,
     su.ReportRefreshDate            AS M365ReportRefreshDate,
     u.LastSuccessfulSignInDateTime,
-    CASE WHEN la.DisabledServicePlanIds IS NULL THEN 0
-         ELSE (SELECT COUNT(*) FROM OPENJSON(la.DisabledServicePlanIds)) END AS DisabledPlanCount
+    -- Prefer the count the sink materialises; legacy rows (loaded before v2)
+    -- fall back to counting the JSON array once, until the next connector run.
+    CASE WHEN la.DisabledPlanCount IS NOT NULL THEN la.DisabledPlanCount
+         WHEN la.DisabledServicePlanIds IS NULL THEN 0
+         ELSE (SELECT COUNT(*) FROM OPENJSON(la.DisabledServicePlanIds)) END AS DisabledPlanCount,
+    -- v2 deterministic mailbox purpose (shared/room/equipment beats the name heuristic)
+    mb.UserPurpose                  AS MailboxPurpose,
+    mb.AutomaticRepliesStatus       AS MailboxAutoReply,
+    -- v2 onboarding evidence: never-registered MFA corroborates "never onboarded"
+    am.IsMfaRegistered,
+    am.LastUpdatedDateTime          AS AuthMethodsUpdatedDateTime
 FROM fact.LicenseAssignment la
 JOIN dim.[User] u              ON u.UserId = la.UserId
 LEFT JOIN dim.Sku sk          ON sk.SkuId = la.SkuId
 LEFT JOIN fact.ServiceUsage su ON su.UserPrincipalName = u.UserPrincipalName  -- matches only when not concealed
+LEFT JOIN fact.Mailbox mb      ON mb.UserId = u.UserId
+LEFT JOIN fact.AuthMethodRegistration am ON am.UserId = u.UserId
 CROSS JOIN concealed c;
 GO
 
 /* ---- dashboard views ---------------------------------------------------- */
 
--- The human review queue: everything not KEEP, richest waste first.
+-- The human review queue: everything not KEEP, richest waste first. v2: decision-aware -
+-- each row carries the human's standing decision (and snooze state) so re-scoring never
+-- buries or resurfaces what a reviewer already handled. The verdict itself stays the
+-- engine's honest, freshly-computed view; the DECISION is the human's, kept alongside.
 CREATE OR ALTER VIEW vw.ReviewQueue AS
 SELECT
     v.UserId, v.SkuId, v.UserPrincipalName, v.DisplayName, v.SkuPartNumber, v.SkuName,
     v.Verdict, v.WasteScore, v.Confidence, v.ReasonCodes,
-    v.EffectiveInactiveDays, v.EstMonthlySavings, v.Currency, v.Department, v.Country, v.ScoredUtc
+    v.EffectiveInactiveDays, v.EstMonthlySavings, v.Currency, v.Department, v.Country,
+    v.SignalCount, v.EvidenceJson, v.ScoredUtc,
+    d.Decision       AS HumanDecision,
+    d.DecidedBy, d.DecidedUtc, d.SnoozeUntilUtc, d.Note AS DecisionNote,
+    CASE WHEN d.Decision = 'snooze' AND (d.SnoozeUntilUtc IS NULL OR d.SnoozeUntilUtc > sysutcdatetime())
+         THEN 1 ELSE 0 END AS Snoozed
 FROM score.AssignmentVerdict v
+LEFT JOIN score.Decision d ON d.UserId = v.UserId AND d.SkuId = v.SkuId
 WHERE v.Verdict <> 'KEEP';
+GO
+
+-- v2: what changed since the previous scoring run - new arrivals in the queue, verdicts
+-- that escalated/relaxed, seats that left. The dashboard's "what's new" strip.
+CREATE OR ALTER VIEW vw.VerdictDelta AS
+WITH runs AS (
+    SELECT RunId, ScoredUtc, ROW_NUMBER() OVER (ORDER BY ScoredUtc DESC) AS rn
+    FROM (SELECT DISTINCT RunId, ScoredUtc FROM score.VerdictHistory) r
+),
+cur  AS (SELECT h.* FROM score.VerdictHistory h JOIN runs r ON r.RunId = h.RunId WHERE r.rn = 1),
+prev AS (SELECT h.* FROM score.VerdictHistory h JOIN runs r ON r.RunId = h.RunId WHERE r.rn = 2)
+SELECT
+    COALESCE(c.UserId, p.UserId)   AS UserId,
+    COALESCE(c.SkuId, p.SkuId)     AS SkuId,
+    COALESCE(c.SkuPartNumber, p.SkuPartNumber) AS SkuPartNumber,
+    p.Verdict                      AS PrevVerdict,
+    c.Verdict                      AS CurrVerdict,
+    p.WasteScore                   AS PrevScore,
+    c.WasteScore                   AS CurrScore,
+    c.EstMonthlySavings,
+    CASE
+        WHEN p.UserId IS NULL                                   THEN 'NEW'
+        WHEN c.UserId IS NULL                                   THEN 'GONE'
+        WHEN c.Verdict <> p.Verdict AND c.Verdict = 'RECLAIM'   THEN 'ESCALATED'
+        WHEN c.Verdict <> p.Verdict AND p.Verdict = 'RECLAIM'   THEN 'RELAXED'
+        WHEN c.Verdict <> p.Verdict                             THEN 'CHANGED'
+        ELSE 'SAME'
+    END AS ChangeKind,
+    c.ScoredUtc
+FROM cur c
+FULL OUTER JOIN prev p ON p.UserId = c.UserId AND p.SkuId = c.SkuId
+WHERE c.Verdict IS NULL OR p.Verdict IS NULL OR c.Verdict <> p.Verdict;
+GO
+
+-- v2: per-connector data freshness - the dashboard's data-health strip. A verdict is
+-- only as trustworthy as its inputs are fresh; surface that instead of hiding it.
+CREATE OR ALTER VIEW vw.DataFreshness AS
+SELECT
+    Entity,
+    MAX(Source)                                        AS Source,
+    MAX(CASE WHEN Status = 'OK' THEN CompletedUtc END) AS LastOkUtc,
+    MAX(CompletedUtc)                                  AS LastAttemptUtc,
+    SUM(CASE WHEN Status <> 'OK' THEN 1 ELSE 0 END)    AS FailedLoads7d,
+    MAX(CASE WHEN Status = 'OK' THEN [RowCount] END)   AS LastOkRows,
+    DATEDIFF(hour, MAX(CASE WHEN Status = 'OK' THEN CompletedUtc END), sysutcdatetime()) AS HoursSinceOk
+FROM meta.LoadRun
+WHERE StartedUtc >= DATEADD(day, -7, sysutcdatetime())
+GROUP BY Entity;
 GO
 
 -- Latest-run savings rollup (assignment + idle-seat waste).
@@ -656,7 +858,7 @@ WHERE c.MonthlyUnitCost IS NULL;
 GO
 
 /* ==========================================================================
-   OPTIMISATION — tier ladder, redundancy map, contracts, right-size/overlap/renewal/reallocation
+   OPTIMISATION - tier ladder, redundancy map, contracts, right-size/overlap/renewal/reallocation
    ========================================================================== */
 
 /* ---- 1. Tier ladder: which SKU can step DOWN to which cheaper SKU --------- */
@@ -792,7 +994,7 @@ WHERE sc.MonthlyUnitCost > 0
 GO
 
 /* ==========================================================================
-   AGENT USAGE — desktop foreground-time correlation
+   AGENT USAGE - desktop foreground-time correlation
    ========================================================================== */
 
 CREATE OR ALTER VIEW vw.AppUsageCorrelated AS
@@ -842,7 +1044,7 @@ LEFT JOIN dim.Device  d  ON d.DeviceName = a.MachineName
 LEFT JOIN dim.[User]  du ON du.UserId    = d.UserId;
 GO
 
-/* Estate-wide per-application usage truth — the companion to Intune's install
+/* Estate-wide per-application usage truth - the companion to Intune's install
    counts on the Applications tab: how many devices/users actually use an app,
    and how much. */
 CREATE OR ALTER VIEW vw.AppUsageByApp AS
@@ -866,7 +1068,7 @@ GO
    FROM vw.AppUsageCorrelated ORDER BY FgActiveSeconds90 DESC; */
 
 /* ==========================================================================
-   AGENT USAGE — app→licence mapping and measured right-sizing
+   AGENT USAGE - app→licence mapping and measured right-sizing
    ========================================================================== */
 
 IF OBJECT_ID('ref.AppProduct') IS NULL
@@ -949,7 +1151,7 @@ GO
    FROM vw.LicenceUsage WHERE UsageVerdict='Unused' ORDER BY ReclaimableMonthly DESC; */
 
 /* ==========================================================================
-   AGENT USAGE — per-user (SID-resolved) usage signal for the engine
+   AGENT USAGE - per-user (SID-resolved) usage signal for the engine
    ========================================================================== */
 
 -- 2) Per-user usage, resolved by real SID first, device primary user as fallback.
@@ -989,7 +1191,7 @@ GROUP BY r.UserId, r.ExePath;
 GO
 
 /* ==========================================================================
-   GOVERNANCE — direct-assignment anomalies and per-device install visibility
+   GOVERNANCE - direct-assignment anomalies and per-device install visibility
    ========================================================================== */
 
 -- ---- item 9: direct (non-group) licence assignments -----------------------
@@ -1014,7 +1216,7 @@ WHERE la.AssignedDirectly = 1
   -- Free / viral / trial plans cost nothing: a direct assignment of one is not a
   -- governance problem and only buries the real deviations. This mirrors
   -- ScoringEngine.IsFreeSku (€0 price on file, "(free)" display name, free/viral
-  -- part-number patterns) — keep the two in sync.
+  -- part-number patterns) - keep the two in sync.
   AND NOT (
         ISNULL(sc.MonthlyUnitCost, -1) = 0
      OR COALESCE(NULLIF(sc.DisplayName, N''), s.DisplayName, N'') LIKE N'%(free)%'
@@ -1048,7 +1250,7 @@ SELECT
     d.OsVersion,
     d.ComplianceState,
     -- Intune's detected-app inventory is per (app, version): each version has its
-    -- own AppId, which fact.AppInstall carries — so the installed VERSION per
+    -- own AppId, which fact.AppInstall carries - so the installed VERSION per
     -- device is recoverable by joining back. Lets the app drill filter the device
     -- list by version.
     da.[Version]  AS AppVersion
@@ -1062,7 +1264,7 @@ WHERE d.DeviceId IS NOT NULL;
 GO
 
 /* ==========================================================================
-   DEFENDER — endpoint software inventory
+   DEFENDER - endpoint software inventory
    ========================================================================== */
 
 /* ---- Org-wide software inventory (one row per title) --------------------- */
@@ -1130,12 +1332,12 @@ GROUP BY
 GO
 
 /* ==========================================================================
-   DEFENDER — fused per-user install evidence & coverage
+   DEFENDER - fused per-user install evidence & coverage
    ========================================================================== */
 
 /* ---- One row per (user, installed app, source). Device multiplicity is
        deduplicated by the reader; names stay raw for fragment matching.
-       MDE machine names arrive as DNS names (host.domain.tld) — matched to
+       MDE machine names arrive as DNS names (host.domain.tld) - matched to
        Intune's dim.Device.DeviceName on the bare lowercase host. ------------ */
 CREATE OR ALTER VIEW vw.SoftwareInstallByUser AS
 WITH dev AS (
@@ -1167,7 +1369,7 @@ GO
 
 /* ---- Per-user inventory visibility. ABSENCE of an install row is only
        evidence when at least one inventory actually covered the user's
-       devices — the engine's "absence of telemetry never auto-reclaims"
+       devices - the engine's "absence of telemetry never auto-reclaims"
        doctrine applied to install data. -------------------------------------- */
 CREATE OR ALTER VIEW vw.UserInstallCoverage AS
 WITH dev AS (
@@ -1195,7 +1397,7 @@ GROUP BY UserId;
 GO
 
 /* ==========================================================================
-   DEFENDER — Advanced Hunting process-run telemetry
+   DEFENDER - Advanced Hunting process-run telemetry
    ========================================================================== */
 
 IF OBJECT_ID('fact.SoftwareRun') IS NULL
@@ -1221,7 +1423,7 @@ GO
 
 /* ---- Attribute runs to Entra users. AccountUpn (who actually ran it) wins;
        fall back to the device's Intune primary user for local accounts.
-       MDE DeviceName arrives as a DNS name — matched on the bare host. -------- */
+       MDE DeviceName arrives as a DNS name - matched on the bare host. -------- */
 CREATE OR ALTER VIEW vw.SoftwareRunByUser AS
 WITH dev AS (
     SELECT DeviceId, LOWER(DeviceName) AS DeviceNameNorm, UserId
@@ -1246,7 +1448,7 @@ GROUP BY COALESCE(u.UserId, d.UserId), sr.FileName;
 GO
 
 /* ==========================================================================
-   USAGE BREADTH — per-app sign-ins, M365 Apps usage, deleted-but-licensed users
+   USAGE BREADTH - per-app sign-ins, M365 Apps usage, deleted-but-licensed users
    ========================================================================== */
 
 /* ---- Entra per-application sign-ins -------------------------------------- */
@@ -1343,7 +1545,7 @@ CREATE TABLE fact.DeletedUserLicense
 );
 GO
 
-/* Deleted-user licences priced out — immediate, unambiguous reclaim list. */
+/* Deleted-user licences priced out - immediate, unambiguous reclaim list. */
 CREATE OR ALTER VIEW vw.DeletedUserLicense AS
 SELECT
     d.UserId, d.UserPrincipalName, d.DisplayName, d.DeletedDateTime,
@@ -1357,7 +1559,7 @@ LEFT JOIN ref.SkuCost c   ON c.SkuPartNumber = sku.SkuPartNumber;   -- ref.SkuCo
 GO
 
 /* ==========================================================================
-   COPILOT — Microsoft 365 Copilot per-user usage
+   COPILOT - Microsoft 365 Copilot per-user usage
    ========================================================================== */
 
 IF OBJECT_ID('fact.CopilotUsage') IS NULL
@@ -1404,7 +1606,122 @@ WHERE c.Concealed = 0;
 GO
 
 /* ==========================================================================
-   ENRICHMENT — Teams, service detail, app health, mobile apps, enterprise-app sign-ins
+   v2 SIGNALS - mailbox purpose, PSTN calling, auth-method registration
+   ========================================================================== */
+
+/* ---- Mailbox settings: the DETERMINISTIC shared/room/equipment discriminator ----
+   Replaces the name-pattern heuristic for shared-mailbox detection. A licensed
+   'shared' mailbox under 50 GB usually needs no license at all - the classic
+   compliance trap, now evidence-backed instead of guessed. -------------------- */
+IF OBJECT_ID('fact.Mailbox') IS NULL
+CREATE TABLE fact.Mailbox
+(
+    MailboxId              bigint IDENTITY(1,1) CONSTRAINT PK_fact_Mailbox PRIMARY KEY,
+    UserId                 nvarchar(64)  NOT NULL,
+    UserPrincipalName      nvarchar(256) NULL,
+    UserPurpose            nvarchar(32)  NULL,   -- user | shared | room | equipment | linked | others
+    AutomaticRepliesStatus nvarchar(32)  NULL,   -- a permanent OOF corroborates long absence
+    TimeZone               nvarchar(64)  NULL,
+    Source                 nvarchar(64)  NULL,
+    RunId                  nvarchar(40)  NULL,
+    SnapshotUtc            datetime2(3)  NULL,
+    LoadedUtc              datetime2(3)  NOT NULL CONSTRAINT DF_fact_Mailbox_Loaded DEFAULT sysutcdatetime()
+);
+GO
+IF IndexProperty(OBJECT_ID('fact.Mailbox'),'IX_Mailbox_User','IndexID') IS NULL
+    CREATE INDEX IX_Mailbox_User ON fact.Mailbox(UserId) INCLUDE (UserPurpose, AutomaticRepliesStatus);
+GO
+
+/* ---- Teams PSTN calling usage (real call-detail records, per user) ----------
+   The authoritative Teams Phone signal: getPstnCalls returns actual PSTN legs,
+   so "zero calls in the window" is hard evidence for an MCOEV seat - much
+   stronger than the Teams activity report's coarse CallCount (which also counts
+   VoIP). ---------------------------------------------------------------------- */
+IF OBJECT_ID('fact.PstnUsage') IS NULL
+CREATE TABLE fact.PstnUsage
+(
+    PstnUsageId          bigint IDENTITY(1,1) CONSTRAINT PK_fact_PstnUsage PRIMARY KEY,
+    UserId               nvarchar(64)  NULL,
+    UserPrincipalName    nvarchar(256) NULL,
+    CallCount            int           NULL,
+    TotalDurationSeconds bigint        NULL,
+    LastCallDateTime     datetime2(3)  NULL,
+    WindowDays           int           NULL,
+    Source               nvarchar(64)  NULL,
+    RunId                nvarchar(40)  NULL,
+    SnapshotUtc          datetime2(3)  NULL,
+    LoadedUtc            datetime2(3)  NOT NULL CONSTRAINT DF_fact_PstnUsage_Loaded DEFAULT sysutcdatetime()
+);
+GO
+IF IndexProperty(OBJECT_ID('fact.PstnUsage'),'IX_PstnUsage_User','IndexID') IS NULL
+    CREATE INDEX IX_PstnUsage_User ON fact.PstnUsage(UserId) INCLUDE (CallCount, TotalDurationSeconds, LastCallDateTime, WindowDays);
+GO
+
+/* Resolve to UserId (rows may arrive keyed by UPN only). */
+CREATE OR ALTER VIEW vw.PstnUsageByUser AS
+SELECT
+    COALESCE(p.UserId, u.UserId)       AS UserId,
+    SUM(ISNULL(p.CallCount, 0))        AS CallCount,
+    SUM(ISNULL(p.TotalDurationSeconds, 0)) AS TotalDurationSeconds,
+    MAX(p.LastCallDateTime)            AS LastCallDateTime,
+    MAX(ISNULL(p.WindowDays, 0))       AS WindowDays
+FROM fact.PstnUsage p
+LEFT JOIN dim.[User] u ON u.UserPrincipalName = p.UserPrincipalName
+WHERE COALESCE(p.UserId, u.UserId) IS NOT NULL
+GROUP BY COALESCE(p.UserId, u.UserId);
+GO
+
+/* ---- Authentication-method registration --------------------------------------
+   A holder who never registered MFA/SSPR was likely never onboarded at all -
+   positive corroboration for NEVER_ACTIVE (never a sole reclaim trigger). ------ */
+IF OBJECT_ID('fact.AuthMethodRegistration') IS NULL
+CREATE TABLE fact.AuthMethodRegistration
+(
+    AuthMethodId          bigint IDENTITY(1,1) CONSTRAINT PK_fact_AuthMethod PRIMARY KEY,
+    UserId                nvarchar(64)  NOT NULL,
+    UserPrincipalName     nvarchar(256) NULL,
+    IsAdmin               bit           NULL,
+    IsMfaRegistered       bit           NULL,
+    IsMfaCapable          bit           NULL,
+    IsPasswordlessCapable bit           NULL,
+    IsSsprRegistered      bit           NULL,
+    IsSsprEnabled         bit           NULL,
+    IsSsprCapable         bit           NULL,
+    MethodsRegistered     nvarchar(1024) NULL,  -- comma-joined method list
+    DefaultMethod         nvarchar(64)  NULL,
+    LastUpdatedDateTime   datetime2(3)  NULL,
+    Source                nvarchar(64)  NULL,
+    RunId                 nvarchar(40)  NULL,
+    SnapshotUtc           datetime2(3)  NULL,
+    LoadedUtc             datetime2(3)  NOT NULL CONSTRAINT DF_fact_AuthMethod_Loaded DEFAULT sysutcdatetime()
+);
+GO
+IF IndexProperty(OBJECT_ID('fact.AuthMethodRegistration'),'IX_AuthMethod_User','IndexID') IS NULL
+    CREATE INDEX IX_AuthMethod_User ON fact.AuthMethodRegistration(UserId) INCLUDE (IsMfaRegistered, IsAdmin, LastUpdatedDateTime);
+GO
+
+/* ---- Copilot depth-of-use (how many host apps, not just "used") --------------
+   A Copilot seat living in one surface only (say, occasional Chat) is a right-size
+   conversation; the per-app activity dates are already in fact.CopilotUsage. ---- */
+CREATE OR ALTER VIEW vw.CopilotDepthByUser AS
+SELECT
+    u.UserId,
+    c.LastActivityAnyDate,
+    (CASE WHEN c.TeamsLastActivityDate      IS NOT NULL THEN 1 ELSE 0 END +
+     CASE WHEN c.WordLastActivityDate       IS NOT NULL THEN 1 ELSE 0 END +
+     CASE WHEN c.ExcelLastActivityDate      IS NOT NULL THEN 1 ELSE 0 END +
+     CASE WHEN c.PowerPointLastActivityDate IS NOT NULL THEN 1 ELSE 0 END +
+     CASE WHEN c.OutlookLastActivityDate    IS NOT NULL THEN 1 ELSE 0 END +
+     CASE WHEN c.OneNoteLastActivityDate    IS NOT NULL THEN 1 ELSE 0 END +
+     CASE WHEN c.LoopLastActivityDate       IS NOT NULL THEN 1 ELSE 0 END +
+     CASE WHEN c.ChatLastActivityDate       IS NOT NULL THEN 1 ELSE 0 END) AS SurfacesUsed
+FROM fact.CopilotUsage c
+JOIN dim.[User] u ON u.UserPrincipalName = c.UserPrincipalName
+WHERE c.Concealed = 0;
+GO
+
+/* ==========================================================================
+   ENRICHMENT - Teams, service detail, app health, mobile apps, enterprise-app sign-ins
    ========================================================================== */
 
 /* ---- Microsoft Teams user activity (per-user message/call/meeting counts) -- */
@@ -1554,7 +1871,7 @@ SELECT AppId, DisplayName, LastSignInUtc FROM fact.ServicePrincipalSignIn;
 GO
 
 /* ==========================================================================
-   WATCHED APPS — SKU-independent paid-software install/idle tracking
+   WATCHED APPS - SKU-independent paid-software install/idle tracking
    ========================================================================== */
 
 IF OBJECT_ID('ref.WatchedApp') IS NULL
@@ -1650,20 +1967,81 @@ FROM ref.WatchedApp w
 JOIN fact.DetectedApp d ON d.DisplayName LIKE w.MatchPattern;
 GO
 
+/* ---- The whole application estate, one row per app ---------------------------
+   The dashboard's search, vendor drill and app drill read THIS view (it was
+   referenced but never defined - /api/search and /api/watched-apps 500'd).
+   Watched apps come through with their license model and cost exposure; every
+   other inventoried app follows with install counts only, so the palette can
+   find ANY application in the tenant, not just the curated ones. -------------- */
+CREATE OR ALTER VIEW vw.AppEstate AS
+SELECT
+    w.Name, w.Vendor, w.LicenseModel, w.AnnualUnitCost, w.Currency, w.CostConfidence,
+    w.MatchedVersions, w.InstallDeviceCount, w.AnnualExposure
+FROM vw.WatchedAppEstate w
+UNION ALL
+SELECT
+    d.DisplayName                    AS Name,
+    MAX(d.Publisher)                 AS Vendor,
+    CAST(NULL AS nvarchar(16))       AS LicenseModel,
+    CAST(NULL AS decimal(12,2))      AS AnnualUnitCost,
+    CAST(NULL AS nvarchar(3))        AS Currency,
+    CAST(NULL AS nvarchar(16))       AS CostConfidence,
+    COUNT(*)                         AS MatchedVersions,
+    ISNULL(SUM(d.DeviceCount), 0)    AS InstallDeviceCount,
+    CAST(NULL AS decimal(14,2))      AS AnnualExposure
+FROM fact.DetectedApp d
+WHERE d.DisplayName IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM ref.WatchedApp w2 WHERE w2.Track = 1 AND d.DisplayName LIKE w2.MatchPattern)
+GROUP BY d.DisplayName;
+GO
+
 /* ==========================================================================
-   GOVERNANCE LOG — human decisions recorded from the dashboard
+   GOVERNANCE LOG - human decisions recorded from the dashboard
    ========================================================================== */
 
 IF OBJECT_ID('score.Decision') IS NULL
 CREATE TABLE score.Decision
 (
-    UserId        nvarchar(64)  NOT NULL,   -- match dim.[User]/score.AssignmentVerdict key widths
-    SkuId         nvarchar(64)  NOT NULL,
-    SkuPartNumber nvarchar(128) NULL,
-    Decision      nvarchar(20)  NOT NULL,     -- 'reclaim' | 'keep' | 'snooze'
-    DecidedBy     nvarchar(256) NULL,         -- from Entra SSO (X-MS-CLIENT-PRINCIPAL-NAME)
-    DecidedUtc    datetime2(3)  NOT NULL CONSTRAINT DF_score_Decision_ts DEFAULT sysutcdatetime(),
-    RunId         nvarchar(64)  NULL,         -- scoring run the decision was made against
+    UserId         nvarchar(64)  NOT NULL,   -- match dim.[User]/score.AssignmentVerdict key widths
+    SkuId          nvarchar(64)  NOT NULL,
+    SkuPartNumber  nvarchar(128) NULL,
+    Decision       nvarchar(20)  NOT NULL,     -- 'reclaim' | 'keep' | 'snooze'
+    DecidedBy      nvarchar(256) NULL,         -- from Entra SSO (X-MS-CLIENT-PRINCIPAL-NAME)
+    DecidedUtc     datetime2(3)  NOT NULL CONSTRAINT DF_score_Decision_ts DEFAULT sysutcdatetime(),
+    RunId          nvarchar(64)  NULL,         -- scoring run the decision was made against
+    SnoozeUntilUtc datetime2(3)  NULL,         -- v2: snooze expires instead of hiding forever
+    Note           nvarchar(400) NULL,         -- v2: reviewer rationale (audit trail)
     CONSTRAINT PK_score_Decision PRIMARY KEY (UserId, SkuId)
 );
+GO
+IF COL_LENGTH('score.Decision','SnoozeUntilUtc') IS NULL ALTER TABLE score.Decision ADD SnoozeUntilUtc datetime2(3) NULL;
+IF COL_LENGTH('score.Decision','Note')           IS NULL ALTER TABLE score.Decision ADD Note nvarchar(400) NULL;
+GO
+-- Defence in depth: the API validates the vocabulary; the table now enforces it too.
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_score_Decision_Vocab')
+    ALTER TABLE score.Decision WITH NOCHECK
+    ADD CONSTRAINT CK_score_Decision_Vocab CHECK (Decision IN ('reclaim','keep','snooze'));
+GO
+
+/* ---- append-only audit of every decision (the Decision table keeps only the
+       LATEST per seat; this log keeps them all, for governance export) --------- */
+IF OBJECT_ID('score.DecisionLog') IS NULL
+CREATE TABLE score.DecisionLog
+(
+    DecisionLogId  bigint IDENTITY(1,1) CONSTRAINT PK_score_DecisionLog PRIMARY KEY,
+    UserId         nvarchar(64)  NOT NULL,
+    SkuId          nvarchar(64)  NOT NULL,
+    SkuPartNumber  nvarchar(128) NULL,
+    Decision       nvarchar(20)  NOT NULL,
+    DecidedBy      nvarchar(256) NULL,
+    DecidedUtc     datetime2(3)  NOT NULL CONSTRAINT DF_score_DecisionLog_ts DEFAULT sysutcdatetime(),
+    RunId          nvarchar(64)  NULL,
+    SnoozeUntilUtc datetime2(3)  NULL,
+    Note           nvarchar(400) NULL,
+    VerdictAtTime  nvarchar(16)  NULL,        -- the engine's verdict when the human decided
+    SavingsAtTime  decimal(12,2) NULL
+);
+GO
+IF IndexProperty(OBJECT_ID('score.DecisionLog'),'IX_DecisionLog_Seat','IndexID') IS NULL
+    CREATE INDEX IX_DecisionLog_Seat ON score.DecisionLog(UserId, SkuId, DecidedUtc DESC);
 GO

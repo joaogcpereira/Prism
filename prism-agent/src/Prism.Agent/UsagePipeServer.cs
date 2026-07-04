@@ -32,6 +32,15 @@ public sealed class UsagePipeServer : IAsyncDisposable
     private Task[]? _loops;
     private long _lastErrLogTicks;   // throttle for client-error logging (shared across loops)
 
+    // v2 liveness ledger: TickCount64 of the last batch each SESSION delivered. A tracker
+    // that is alive-as-a-process but hung stops shipping; the watchdog reads this to tell
+    // "healthy but quiet" from "wedged" and restarts the latter. Session id comes from the
+    // OS (client PID -> session), never from the payload.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<uint, long> s_lastContact = new();
+    public static long? LastContactTicks(uint sessionId)
+        => s_lastContact.TryGetValue(sessionId, out long t) ? t : null;
+    public static void ForgetSessionContact(uint sessionId) => s_lastContact.TryRemove(sessionId, out _);
+
     public UsagePipeServer(Func<UsageContext, CancellationToken, Task<UsageAck>> handler, int concurrentInstances = 4)
     {
         _handler = handler;
@@ -91,6 +100,9 @@ public sealed class UsagePipeServer : IAsyncDisposable
             try
             {
                 ack = await _handler(new UsageContext(sid, batch), ct).ConfigureAwait(false);
+                // Liveness: a successfully-handled batch proves the session's tracker works.
+                if (ProcessNative.TryGetClientSessionId(server.SafePipeHandle) is { } sess)
+                    s_lastContact[sess] = Environment.TickCount64;
             }
             catch (Exception ex)
             {
@@ -120,11 +132,14 @@ public sealed class UsagePipeServer : IAsyncDisposable
             new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
             PipeAccessRights.FullControl, AccessControlType.Allow));
 
-        // Authenticated Users: connect + read + write (so any logged-on user's
-        // helper can report). Tighten to Interactive (S-1-5-4) if you never
-        // expect service-account or scheduled-task clients.
+        // INTERACTIVE (S-1-5-4) only: exactly the logged-on users whose sessions the
+        // launcher spawns trackers into. The previous Authenticated Users grant also
+        // admitted domain service accounts, which could submit fabricated usage under
+        // their own (real) SID and skew licence metrics - tightened v2. If a scheduled-
+        // task client ever becomes a requirement, add ITS specific account SID here
+        // explicitly rather than re-widening to all authenticated principals.
         security.AddAccessRule(new PipeAccessRule(
-            new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null),
+            new SecurityIdentifier(WellKnownSidType.InteractiveSid, null),
             PipeAccessRights.ReadWrite, AccessControlType.Allow));
 
         return NamedPipeServerStreamAcl.Create(

@@ -1,5 +1,5 @@
 # =============================================================================
-# azure-pipelines-apps.yml — Prism (AppID 0001) PHASE 2 application deployment
+# azure-pipelines-apps.yml - Prism (AppID 0001) PHASE 2 application deployment
 # -----------------------------------------------------------------------------
 # Builds + pushes the four container images to the existing private ACR, then
 # deploys infra/apps/main.bicep (the four Prism objects) into the existing

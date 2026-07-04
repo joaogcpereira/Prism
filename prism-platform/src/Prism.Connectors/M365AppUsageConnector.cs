@@ -4,7 +4,7 @@
 //  ReportSettings.Read.All).
 //
 //  getM365AppUserDetail: per-user last-activity for the DESKTOP/office
-//  apps themselves — Word, Excel, PowerPoint, Outlook, OneNote, Teams —
+//  apps themselves - Word, Excel, PowerPoint, Outlook, OneNote, Teams -
 //  plus which PLATFORMS were used (Windows / Mac / Web / Mobile). This
 //  is distinct from getOffice365ActiveUserDetail (which is workload-
 //  level: Exchange/SharePoint/Teams) and sharpens SHALLOW_USE: "the

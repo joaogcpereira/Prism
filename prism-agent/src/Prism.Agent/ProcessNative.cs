@@ -39,6 +39,20 @@ internal static partial class ProcessNative
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool CloseHandle(nint hObject);
 
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool ProcessIdToSessionId(uint dwProcessId, out uint pSessionId);
+
+    /// <summary>OS-derived session id of the connected pipe client (null if unavailable).
+    /// Used only for the tracker-liveness ledger - like the SID, it cannot be spoofed
+    /// by the payload because it comes from the kernel, not the client.</summary>
+    public static uint? TryGetClientSessionId(SafePipeHandle pipeHandle)
+    {
+        if (!GetNamedPipeClientProcessId(pipeHandle.DangerousGetHandle(), out uint pid) || pid == 0)
+            return null;
+        return ProcessIdToSessionId(pid, out uint session) ? session : null;
+    }
+
     /// <summary>Returns the client's user SID string, or null if it can't be determined.</summary>
     public static string? TryGetClientUserSid(SafePipeHandle pipeHandle)
     {

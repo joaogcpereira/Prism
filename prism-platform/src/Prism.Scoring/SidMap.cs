@@ -3,7 +3,7 @@
 //  NOTE: As of Wave 3.2 the engine resolves desktop app usage to
 //  the licensed user via Intune's device PRIMARY USER (see
 //  vw.AppUsageByUser90), which works for Entra-joined AND hybrid
-//  devices alike — so this SID derivation is no longer on the
+//  devices alike - so this SID derivation is no longer on the
 //  scoring path. It is retained as a reference/utility for any
 //  future Entra-joined-only, SID-keyed correlation.
 //
@@ -11,7 +11,7 @@
 //  account SID the agent reports on Entra-joined devices. The SID
 //  S-1-12-1-a-b-c-d encodes the GUID as four little-endian uint32s.
 //  Hybrid/AD-joined SIDs derive from on-prem AD instead, so this
-//  mapping does not hold there — which is exactly why the engine no
+//  mapping does not hold there - which is exactly why the engine no
 //  longer depends on it.
 // ============================================================
 namespace Prism.Scoring;

@@ -8,8 +8,8 @@
     <InvariantGlobalization>false</InvariantGlobalization>
     <AssemblyName>prism-connectors</AssemblyName>
     <RootNamespace>Prism.Connectors</RootNamespace>
-    <Version>1.0.0</Version>
-    <InformationalVersion>1.0.0</InformationalVersion>
+    <Version>1.0.0-rc.1</Version>
+    <InformationalVersion>1.0.0-rc.1</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,7 +1,7 @@
 using './main.bicep'
 
 // =============================================================================
-// Prism (AppID 0001) — PHASE 2 application parameters.
+// Prism (AppID 0001) - PHASE 2 application parameters.
 // Publishes prism-gateway / prism-dashboard / prism-connectors / prism-scoring
 // into the EXISTING Phase 1 environment (contosoPrismEnvDev) / ACR (contosoprismacrdev)
 // / SQL (contoso-prism-sql-dev) using the shared UAMI (id-prism-platform).

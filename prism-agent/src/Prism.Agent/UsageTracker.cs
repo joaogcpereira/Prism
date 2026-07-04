@@ -339,6 +339,14 @@ internal sealed class UsageTracker : IDisposable
         LASTINPUTINFO lii = default;
         lii.cbSize = (uint)Marshal.SizeOf<LASTINPUTINFO>();
         if (!GetLastInputInfo(ref lii)) return false;
+        // Wrap-safety (audited): GetLastInputInfo's dwTime is the 32-bit tick counter,
+        // which wraps every ~49.7 days of uptime. UNSIGNED subtraction of two uint ticks
+        // is modular arithmetic, so `now - then` remains correct ACROSS one wrap - the
+        // classic bug would be comparing the values directly or widening to 64-bit first.
+        // (Deliberately (uint)Environment.TickCount, NOT TickCount64: both operands must
+        // live in the same 32-bit modular space for the subtraction to be wrap-safe.)
+        // Residual window: idle spans longer than ~49.7 days alias back - irrelevant at a
+        // 60 s idle threshold sampled every 30 s.
         uint idleMs = unchecked((uint)Environment.TickCount - lii.dwTime);
         return idleMs > _idleThresholdMs;
     }

@@ -38,6 +38,10 @@ if ($ServerCertThumbprint -and $GatewayUrl -like '*azurecontainerapps.io*') {
 # Write uploader config if a gateway was provided.
 if ($GatewayUrl) {
     New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
+    # v2: harden the data dir NOW (inheritance off; SYSTEM + Administrators only) instead of
+    # leaving ProgramData's default world-readable ACL in place until the service's first
+    # start re-applies it. Closes the window where any local user could read config/spool.
+    & icacls $DataDir /inheritance:r /grant:r 'SYSTEM:(OI)(CI)F' 'BUILTIN\Administrators:(OI)(CI)F' | Out-Null
     $cfg = [ordered]@{
         GatewayUrl            = $GatewayUrl
         CertThumbprint        = $CertThumbprint

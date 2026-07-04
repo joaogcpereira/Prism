@@ -1,4 +1,4 @@
-# Prism Win32 Usage-Metering Agent — Single Executable
+# Prism Win32 Usage-Metering Agent - Single Executable
 
 One deployable binary, `prism-agent.exe` (plus a shared Contracts library that
 compiles into it). Now includes a real Windows Service host, a per-session
@@ -9,7 +9,7 @@ Intune deployment scripts.
 
 | Folder | Project | Kind | Produces |
 |---|---|---|---|
-| `src/Prism.Agent.Contracts` | class library (net10.0) | compiled in | — |
+| `src/Prism.Agent.Contracts` | class library (net10.0) | compiled in | - |
 | `src/Prism.Agent` | executable (net10.0-windows, AOT) | **`prism-agent.exe`** | the single binary you deploy |
 
 ## Modes (one binary)
@@ -35,7 +35,7 @@ enforces that. A shipped `UsageRollup` records only *which executable* ran and
 *how many seconds* it spent in each visibility state (foreground-active,
 foreground-idle, visible-background, minimised, tray) on a given day, plus
 file-version metadata and launch count. It deliberately carries **no window
-titles, document names, URLs, command lines, keystrokes, or screen content** —
+titles, document names, URLs, command lines, keystrokes, or screen content** -
 exactly what licence true-up / reclaim needs and nothing more. User attribution
 is the OS-proven SID of the connecting session (derived by the service, not
 self-reported in the payload), so usage maps to a licence holder without the
@@ -43,22 +43,22 @@ payload being able to spoof identity.
 
 ## Source layout (src/Prism.Agent)
 
-- `Program.cs` — argument dispatch
-- `ServiceMode.cs` — runs as a service if SCM-launched, else console host
-- `ServiceHost.cs` — Windows Service control plumbing (P/Invoke, AOT-clean) incl. session-change
-- `AgentService.cs` — orchestrates pipe server + session launcher + watchdog
-- `SessionLauncher.cs` — `WTSQueryUserToken` + `CreateProcessAsUser` into each session
-- `SessionMode.cs` — the tracker host (pump thread + ACK-gated ship loop)
-- `InstallMode.cs` — `--install` / `--uninstall` via the service-control API
-- `LocalSink.cs` — local upload spool + quarantine (self-bounding), and the
+- `Program.cs` - argument dispatch
+- `ServiceMode.cs` - runs as a service if SCM-launched, else console host
+- `ServiceHost.cs` - Windows Service control plumbing (P/Invoke, AOT-clean) incl. session-change
+- `AgentService.cs` - orchestrates pipe server + session launcher + watchdog
+- `SessionLauncher.cs` - `WTSQueryUserToken` + `CreateProcessAsUser` into each session
+- `SessionMode.cs` - the tracker host (pump thread + ACK-gated ship loop)
+- `InstallMode.cs` - `--install` / `--uninstall` via the service-control API
+- `LocalSink.cs` - local upload spool + quarantine (self-bounding), and the
   Windows Event Log (lifecycle + warnings only; no per-batch logging)
-- `UsageTracker.cs`, `UsageModels.cs`, `WindowNative.cs` — the measurement engine
-- `UsagePipeServer.cs`, `ProcessNative.cs` — service-side pipe + OS-derived client SID
-- `UsagePipeClient.cs` — session-side pipe client
-- `Uploader.cs` — mTLS uploader (device-cert auth, drains the spool to the gateway)
+- `UsageTracker.cs`, `UsageModels.cs`, `WindowNative.cs` - the measurement engine
+- `UsagePipeServer.cs`, `ProcessNative.cs` - service-side pipe + OS-derived client SID
+- `UsagePipeClient.cs` - session-side pipe client
+- `Uploader.cs` - mTLS uploader (device-cert auth, drains the spool to the gateway)
 
-(Five native-interop classes — `WindowNative`, `ProcessNative`, `ServiceNative`,
-`SessionNative`, `ScmNative` — coexist cleanly in one assembly.)
+(Five native-interop classes - `WindowNative`, `ProcessNative`, `ServiceNative`,
+`SessionNative`, `ScmNative` - coexist cleanly in one assembly.)
 
 ## Build / run / publish
 
@@ -88,26 +88,28 @@ Fleet (Intune, silent): see `deploy/INTUNE.md`. Scripts: `deploy/install.ps1`,
 ## Where to see that it's working
 
 - **Upload spool (service):** `C:\ProgramData\Prism\Agent\spool\*.json`
-  — one file per received batch, awaiting upload. The uploader deletes each on
+  - one file per received batch, awaiting upload. The uploader deletes each on
   delivery, so in a healthy fleet this stays near-empty; permanently rejected
   batches land in `quarantine\`. (There is intentionally no permanent local
-  audit file — it would grow without bound; the warehouse is the system of record.)
+  audit file - it would grow without bound; the warehouse is the system of record.)
 - **Event Log:** Event Viewer -> Windows Logs -> Application -> source `ContosoPrismAgent`.
 - **Session tracker (console/dev):** prints a startup line + a per-ship summary.
 
-## Status / what's next
+## Status - 1.3.0-rc.1
 
-Done: measurement engine, named-pipe IPC, single-exe merge, Windows Service host,
-per-session launcher, install/uninstall, self-bounding local spool, **mTLS uploader
-(device-cert auth, spool/retry/quarantine)**, and Intune scripts.
+Feature-complete release candidate (see [`CHANGELOG.md`](CHANGELOG.md)). Everything the
+v1 line shipped - measurement engine, named-pipe IPC, single-exe service + per-session
+launcher, install/uninstall, self-bounding spool, mTLS uploader - plus the RC hardening
+pass: **interactive-only pipe ACL**, a **silent-tracker watchdog** (hung trackers are
+detected via pipe liveness and relaunched), **per-file upload backoff with max-retry
+quarantine**, **pin + revocation TLS validation**, a **private-key startup probe**, and
+**spool-loss visibility**. The gateway/server side lands the batches in the Prism
+warehouse (see the prism-platform repository).
 
-The agent is feature-complete for v1. Remaining work is the **gateway/server
-side** (receive the POSTed batches, authenticate by client cert, land them in the
-warehouse) and the rest of the Prism platform (attribution scoring, dashboards).
-
-**Honest status:** review-ready; the console paths are tested. The
-service-hosted path (SCM control + `CreateProcessAsUser` into sessions), the
-service-control install, and the mTLS upload (cert selection from
-`LocalMachine\My`, client-auth handshake) should all get a first run on a
-**pilot device** before fleet rollout. Sign the exe before packaging. Build on
+**Honest status:** the console paths are tested; the service-hosted path (SCM control +
+`CreateProcessAsUser` into sessions), the service-control install, and the mTLS upload
+(cert selection from `LocalMachine\My`, client-auth handshake) should still get a first
+run on a **pilot device** before fleet rollout. UWP/Store apps hosted by
+ApplicationFrameHost can roll up under the host process when the hosted child can't be
+resolved (AppUserModelID identity is planned). Sign the exe before packaging. Build on
 Windows with the .NET 10 SDK.

@@ -2,7 +2,7 @@
 //  AppHealthConnector.cs
 //  Source: intune.app-health. Read-only (DeviceManagementManagedDevices.Read.All).
 //
-//  Intune Endpoint Analytics — App Health
+//  Intune Endpoint Analytics - App Health
 //  (deviceManagement/userExperienceAnalyticsAppHealthApplicationPerformance):
 //  tenant/app-level app usage duration + active-device count + crash/hang stats,
 //  collected agent-independently. Corroborates whether an app is actually used

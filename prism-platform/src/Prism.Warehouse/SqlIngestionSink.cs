@@ -3,7 +3,7 @@
 //  IIngestionSink over Azure SQL. Dispatches each entity to its
 //  table with the correct load mode (REPLACE for snapshots, UPSERT
 //  for time-series), building a typed DataTable per entity. Drop-in
-//  for the connectors' FileIngestionSink — same call site.
+//  for the connectors' FileIngestionSink - same call site.
 //
 //  Empty snapshots are SKIPPED (not replaced) so a failed/empty pull
 //  can't wipe good data.
@@ -51,6 +51,9 @@ public sealed class SqlIngestionSink : IIngestionSink
             case "mobile-app-installs": await Replace("fact.MobileAppInstall", Cast<FactMobileAppInstall>(items), MobileAppInstallMap, entityName, ct); break;
             case "sp-signins":          await Replace("fact.ServicePrincipalSignIn", Cast<FactServicePrincipalSignIn>(items), SpSignInMap, entityName, ct); break;
             case "deleted-user-licenses": await Replace("fact.DeletedUserLicense", Cast<FactDeletedUserLicense>(items), DeletedUserLicenseMap, entityName, ct); break;
+            case "mailbox-settings":    await Replace("fact.Mailbox", Cast<FactMailbox>(items), MailboxMap, entityName, ct); break;
+            case "pstn-usage":          await Replace("fact.PstnUsage", Cast<FactPstnUsage>(items), PstnUsageMap, entityName, ct); break;
+            case "auth-methods":        await Replace("fact.AuthMethodRegistration", Cast<FactAuthMethod>(items), AuthMethodMap, entityName, ct); break;
 
             case "azure-cost":          await Upsert("fact.AzureCost", Cast<FactAzureCost>(items), CostMap, CostKeys, CostOn, entityName, ct); break;
             case "app-usage":           await Upsert("fact.AppUsage", Cast<FactAppUsage>(items), AppUsageMap, AppKeys, AppOn, entityName, ct); break;
@@ -119,6 +122,8 @@ public sealed class SqlIngestionSink : IIngestionSink
         new("LastSuccessfulSignInDateTime", typeof(DateTime), e => Dt(e.Data.LastSuccessfulSignInDateTime)),
         new("SecurityIdentifier", typeof(string), e => Str(e.Data.SecurityIdentifier)),
         new("OnPremisesSecurityIdentifier", typeof(string), e => Str(e.Data.OnPremisesSecurityIdentifier)),
+        new("UserType", typeof(string), e => Str(e.Data.UserType)),
+        new("OnPremisesSyncEnabled", typeof(bool), e => NBit(e.Data.OnPremisesSyncEnabled)),
         .. Prov<DimUser>(),
     ];
 
@@ -145,6 +150,8 @@ public sealed class SqlIngestionSink : IIngestionSink
         new("State", typeof(string), e => Str(e.Data.State)),
         new("LastUpdatedDateTime", typeof(DateTime), e => Dt(e.Data.LastUpdatedDateTime)),
         new("DisabledServicePlanIds", typeof(string), e => Json(e.Data.DisabledServicePlanIds)),
+        // Materialised count so vw.LicenseSignals no longer OPENJSONs per row on every read.
+        new("DisabledPlanCount", typeof(int), e => e.Data.DisabledServicePlanIds?.Length ?? 0),
         .. Prov<FactLicenseAssignment>(),
     ];
 
@@ -395,6 +402,44 @@ public sealed class SqlIngestionSink : IIngestionSink
         new("DeletedDateTime", typeof(DateTime), e => Dt(e.Data.DeletedDateTime)),
         new("SkuId", typeof(string), e => Str(e.Data.SkuId)),
         .. Prov<FactDeletedUserLicense>(),
+    ];
+
+    private static readonly Col<FactMailbox>[] MailboxMap =
+    [
+        new("UserId", typeof(string), e => Str(e.Data.UserId)),
+        new("UserPrincipalName", typeof(string), e => Str(e.Data.UserPrincipalName)),
+        new("UserPurpose", typeof(string), e => Str(e.Data.UserPurpose)),
+        new("AutomaticRepliesStatus", typeof(string), e => Str(e.Data.AutomaticRepliesStatus)),
+        new("TimeZone", typeof(string), e => Str(e.Data.TimeZone)),
+        .. Prov<FactMailbox>(),
+    ];
+
+    private static readonly Col<FactPstnUsage>[] PstnUsageMap =
+    [
+        new("UserId", typeof(string), e => Str(e.Data.UserId)),
+        new("UserPrincipalName", typeof(string), e => Str(e.Data.UserPrincipalName)),
+        new("CallCount", typeof(int), e => e.Data.CallCount),
+        new("TotalDurationSeconds", typeof(long), e => e.Data.TotalDurationSeconds),
+        new("LastCallDateTime", typeof(DateTime), e => Dt(e.Data.LastCallDateTime)),
+        new("WindowDays", typeof(int), e => e.Data.WindowDays),
+        .. Prov<FactPstnUsage>(),
+    ];
+
+    private static readonly Col<FactAuthMethod>[] AuthMethodMap =
+    [
+        new("UserId", typeof(string), e => Str(e.Data.UserId)),
+        new("UserPrincipalName", typeof(string), e => Str(e.Data.UserPrincipalName)),
+        new("IsAdmin", typeof(bool), e => NBit(e.Data.IsAdmin)),
+        new("IsMfaRegistered", typeof(bool), e => NBit(e.Data.IsMfaRegistered)),
+        new("IsMfaCapable", typeof(bool), e => NBit(e.Data.IsMfaCapable)),
+        new("IsPasswordlessCapable", typeof(bool), e => NBit(e.Data.IsPasswordlessCapable)),
+        new("IsSsprRegistered", typeof(bool), e => NBit(e.Data.IsSsprRegistered)),
+        new("IsSsprEnabled", typeof(bool), e => NBit(e.Data.IsSsprEnabled)),
+        new("IsSsprCapable", typeof(bool), e => NBit(e.Data.IsSsprCapable)),
+        new("MethodsRegistered", typeof(string), e => Str(e.Data.MethodsRegistered)),
+        new("DefaultMethod", typeof(string), e => Str(e.Data.DefaultMethod)),
+        new("LastUpdatedDateTime", typeof(DateTime), e => Dt(e.Data.LastUpdatedDateTime)),
+        .. Prov<FactAuthMethod>(),
     ];
 
     private static readonly Col<FactAzureCost>[] CostMap =

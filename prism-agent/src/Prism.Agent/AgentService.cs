@@ -41,11 +41,21 @@ internal sealed class AgentService
         {
             _launcher = new SessionLauncher();
             _launcher.LaunchInAllActiveSessions();
-            // Watchdog: every 60s re-launch the tracker in any active session that
-            // lacks a live one. Idempotent; covers missed logons and helper crashes.
+            // Watchdog: every 60s (a) re-launch the tracker in any active session that
+            // lacks a live one (idempotent; covers missed logons and helper crashes),
+            // and (b) v2: restart trackers that are alive-but-silent on the pipe - a
+            // hung tracker passes the process-exists check yet measures nothing. A
+            // healthy tracker ships every ~5 min; 20 min of silence (or 10 min with
+            // no first contact after launch) is decisively wedged.
             _watchdog = new Timer(_ =>
             {
-                try { _launcher?.LaunchInAllActiveSessions(); } catch { /* keep service alive */ }
+                try
+                {
+                    _launcher?.LaunchInAllActiveSessions();
+                    _launcher?.RestartSilentTrackers(UsagePipeServer.LastContactTicks,
+                        silentAfterMs: 20 * 60_000, firstContactGraceMs: 10 * 60_000);
+                }
+                catch { /* keep service alive */ }
             }, null, TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60));
         }
     }

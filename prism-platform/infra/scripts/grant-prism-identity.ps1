@@ -1,19 +1,19 @@
 <#
-  grant-prism-identity.ps1  —  Prism (AppID 0001)
+  grant-prism-identity.ps1  -  Prism (AppID 0001)
   -----------------------------------------------------------------------------
   Grants the Prism user-assigned managed identity the permissions the platform
   needs that are NOT created by the Phase 2 Bicep deployment:
 
-    1. Key Vault   — get on secrets (the gateway reads the device-trust CA cert)   [az]
-    2. Microsoft Graph — application permissions for the connectors                [Microsoft.Graph]
-    3. (optional) Cost Management Reader — pass -CostManagementScope               [az]
+    1. Key Vault   - get on secrets (the gateway reads the device-trust CA cert)   [az]
+    2. Microsoft Graph - application permissions for the connectors                [Microsoft.Graph]
+    3. (optional) Cost Management Reader - pass -CostManagementScope               [az]
     4. (optional) ACR pull                                                         [az, commented]
 
   NOT handled here:
     - ACR pull is normally created by the Bicep (grantAcrPull=true). Only use the
       optional block below if the deploy service principal can't create that role
       assignment (then also set grantAcrPull=false in main.bicepparam).
-    - SQL access is a T-SQL step — run grant-prism-sql.sql against the Prism DB.
+    - SQL access is a T-SQL step - run grant-prism-sql.sql against the Prism DB.
 
   Prerequisites:
     - Azure CLI signed in:            az login
@@ -33,7 +33,7 @@ param(
   [string]   $IdentityRg     = 'dev-prism',
   [string]   $KeyVaultName   = 'contoso-prism-dev',
   # Pass the scope the cost connector queries (a management group or subscription id) to also
-  # grant Cost Management Reader. Leave empty to skip — the cost connector is off unless you set
+  # grant Cost Management Reader. Leave empty to skip - the cost connector is off unless you set
   # Prism__CostManagementScope on the connectors job.
   [string]   $CostManagementScope = '',
   # Microsoft Graph APPLICATION permissions. Comment out any connector you won't enable.
@@ -43,7 +43,10 @@ param(
     'AuditLog.Read.All',                       # Entra per-app + service-principal sign-ins
     'DeviceManagementManagedDevices.Read.All', # Intune detected apps / managed devices / endpoint analytics app health
     'DeviceManagementApps.Read.All',           # Intune managed-app install summary (EnableMobileAppsConnector)
-    'User-LifeCycleInfo.Read.All'              # employeeLeaveDateTime / leaver dates (EnableLeaverDates) — optional
+    'User-LifeCycleInfo.Read.All',             # employeeLeaveDateTime / leaver dates (EnableLeaverDates) - optional
+    'MailboxSettings.Read',                    # mailbox userPurpose = deterministic shared/room/equipment (EnableMailboxSettings) - optional
+    'CallRecord-PstnCalls.Read.All'            # Teams Phone PSTN call log (EnablePstn) - optional; NARROW report scope, prefer over CallRecords.Read.All
+    # AuthMethods connector (EnableAuthMethods) reuses AuditLog.Read.All above - no extra grant.
   )
 )
 
@@ -78,7 +81,7 @@ $existing = Get-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $miSp.Id
 
 foreach ($perm in $GraphPermissions) {
   $role = $graphSp.AppRoles | Where-Object { $_.Value -eq $perm -and $_.AllowedMemberTypes -contains 'Application' }
-  if (-not $role) { Write-Warning "Graph app role '$perm' not found — skipped."; continue }
+  if (-not $role) { Write-Warning "Graph app role '$perm' not found - skipped."; continue }
   if ($existing | Where-Object { $_.AppRoleId -eq $role.Id -and $_.ResourceId -eq $graphSp.Id }) {
     Write-Host "Already granted: $perm" -ForegroundColor DarkGray
     continue

@@ -1,5 +1,5 @@
 # =============================================================================
-# azure-pipelines.yml — Prism (AppID 0001) infrastructure deployment
+# azure-pipelines.yml - Prism (AppID 0001) infrastructure deployment
 # -----------------------------------------------------------------------------
 # Three stages: Validate -> WhatIf -> Deploy (gated by an Environment approval).
 # Deploys main.bicep (+ main.bicepparam) into a resource-group whose name starts
@@ -9,7 +9,7 @@
 #   * A service connection (ARM, workload-identity federation recommended) with
 #     Contributor on the target subscription/RG, named in `azureServiceConnection`.
 #   * An Environment named `Prism-Dev` (Pipelines > Environments) with an
-#     "Approvals and checks" approval gate attached — this is the approval gate
+#     "Approvals and checks" approval gate attached - this is the approval gate
 #     for the Deploy stage.
 #
 # NOTE: this pipeline deploys INFRASTRUCTURE only. Building/pushing the container

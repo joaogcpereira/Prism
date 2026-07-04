@@ -9,7 +9,7 @@
 //    getSharePointActivityUserDetail(+ visited page count)
 //
 //  Adds INTENSITY beyond the workload last-activity dates already in
-//  fact.ServiceUsage — e.g. "has a OneDrive licence but edited zero files".
+//  fact.ServiceUsage - e.g. "has a OneDrive licence but edited zero files".
 //  All three reports are written in ONE WriteAsync call (a REPLACE deletes by
 //  Source, so separate calls would clobber each other).
 // ============================================================

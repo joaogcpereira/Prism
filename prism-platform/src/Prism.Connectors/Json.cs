@@ -25,5 +25,10 @@ namespace Prism.Connectors.Json;
 [JsonSerializable(typeof(CostQuery))]
 [JsonSerializable(typeof(CostQueryResult))]
 [JsonSerializable(typeof(SubscriptionList))]
+// v2 signal connectors
+[JsonSerializable(typeof(GraphUserIdsResponse))]
+[JsonSerializable(typeof(GraphMailboxSettings))]
+[JsonSerializable(typeof(PstnCallsResponse))]
+[JsonSerializable(typeof(AuthRegistrationResponse))]
 public sealed partial class GraphJsonContext : JsonSerializerContext { }
 

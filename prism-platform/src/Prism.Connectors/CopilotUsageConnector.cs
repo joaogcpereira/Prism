@@ -6,7 +6,7 @@
 //  getMicrosoft365CopilotUsageUserDetail (Graph BETA): per-user last activity
 //  for Microsoft 365 Copilot in each host app (Teams / Word / Excel / PowerPoint
 //  / Outlook / OneNote / Loop / Copilot Chat). This is the ONLY signal that sees
-//  Copilot seat usage — every exe/workload/sign-in signal is blind to it — and
+//  Copilot seat usage - every exe/workload/sign-in signal is blind to it - and
 //  Copilot is the priciest per-seat SKU, so an enabled-but-idle seat is the
 //  clearest reclaim candidate. Same 302->CSV + concealment handling as the other
 //  usage-report connectors.

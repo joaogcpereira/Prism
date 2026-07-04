@@ -74,5 +74,14 @@ public sealed class GatewayOptions
     // ---- Request limits / abuse protection -----------------------------
     public long MaxRequestBodyBytes { get; set; } = 12L * 1024 * 1024;   // > agent's 8 MB frame cap
     public int MaxRollupsPerBatch { get; set; } = 10_000;
-    public int RateLimitPermitPerMinute { get; set; } = 60;             // per device; normal is ~1 / 5 min
+    // Fixed-window rate limit on the INGEST endpoint only (health probes are
+    // exempt), partitioned per device (cert thumbprint, else remote IP). A
+    // healthy agent posts ~1 request / 5 min, so 30/min is already ~150x
+    // headroom; anything hotter is a runaway or hostile client. Over-limit
+    // requests are rejected with 429 + Retry-After.
+    public int RateLimitPerMinute { get; set; } = 30;
+    // Queue depth for over-limit requests before rejection. 0 (default) =
+    // reject immediately: a backlogged device should back off and retry, not
+    // hold a request slot open on the gateway.
+    public int RateLimitBurst { get; set; } = 0;
 }

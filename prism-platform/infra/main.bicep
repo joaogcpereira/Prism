@@ -1,5 +1,5 @@
 // =============================================================================
-// main.bicep  —  Prism (AppID 0001) infrastructure orchestrator (PAA-compliant)
+// main.bicep  -  Prism (AppID 0001) infrastructure orchestrator (PAA-compliant)
 // -----------------------------------------------------------------------------
 // Deploys, at RESOURCE GROUP scope, exactly the three resources defined in the
 // sibling modules:
@@ -10,7 +10,7 @@
 //   3. sqldatabase.bicep        -> Azure SQL logical server + serverless DB
 //      (Entra-only auth, Private Endpoint, public access Disabled)
 //
-// IMPORTANT — environment token:
+// IMPORTANT - environment token:
 //   containerregistry.bicep and sqldatabase.bicep derive their `environment`
 //   token from the LEADING segment of resourceGroup().name:
 //       environment = substring(rgName, 0, indexOf(rgName, '-'))
@@ -167,7 +167,7 @@ module sqlDatabase './sqldatabase.bicep' = {
       administratorType: 'ActiveDirectory'
     }
     publicNetworkAccess: 'Disabled' // PAA
-    // PAA: NO firewall rules — all access via the Private Endpoint only.
+    // PAA: NO firewall rules - all access via the Private Endpoint only.
     privateEndpoints: [
       {
         // No privateDnsZoneGroup: the network team creates DNS via the change-management process.

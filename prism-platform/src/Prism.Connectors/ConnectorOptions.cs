@@ -22,7 +22,7 @@ public sealed class ConnectorOptions
     // Page size for Graph list calls (max 999 for /users).
     public int PageSize { get; set; } = 999;
 
-    // Item 4 — per-device install visibility. For each detected app whose
+    // Item 4 - per-device install visibility. For each detected app whose
     // DisplayName contains one of these (case-insensitive) fragments, the Intune
     // connector expands detectedApps/{id}/managedDevices into fact.AppInstall so the
     // dashboard can show exactly which devices/users have it installed. These
@@ -33,7 +33,7 @@ public sealed class ConnectorOptions
     // When true, the connector ALSO expands per-device installs for the REST of the
     // detected-app inventory (Store/UWP identity-style names and zero-install rows
     // skipped), most-installed first, so the Applications drill can show the device
-    // list for any app — not just the watched ones. Each app costs one Graph call,
+    // list for any app - not just the watched ones. Each app costs one Graph call,
     // so the total is hard-capped by MaxInstallExpansions per run (watched apps
     // count against the cap last, i.e. they are never the ones dropped).
     public bool ExpandAllInstalls { get; set; } = true;
@@ -43,7 +43,7 @@ public sealed class ConnectorOptions
     // longer has an artificial deadline and the job's --replica-timeout should be set
     // generously, the sweep simply runs to completion. A POSITIVE value re-enables the
     // old behaviour (stop expanding in time to still write what was gathered before a
-    // finite replica timeout kills the replica) — keep it under --replica-timeout.
+    // finite replica timeout kills the replica) - keep it under --replica-timeout.
     public int InstallExpansionTimeBudgetSeconds { get; set; } = 0;
     // Base pacing between expansion $batch calls (the floor of the adaptive pace).
     // Intune's managedDevices endpoint is throttled far more aggressively than general
@@ -51,20 +51,20 @@ public sealed class ConnectorOptions
     public int InstallExpansionDelayMs { get; set; } = 250;
     // Adaptive pacing ceiling (AIMD). The inter-batch delay starts at
     // InstallExpansionDelayMs and DOUBLES whenever Graph signals throttling (up to this
-    // ceiling), then eases back down as batches succeed — so the sweep settles just
+    // ceiling), then eases back down as batches succeed - so the sweep settles just
     // under Graph's tolerance instead of triggering 429 after 429.
     public int InstallExpansionMaxDelayMs { get; set; } = 15000;
 
     // Cadence gate for the (expensive) install expansion. Empty / "any" = every run.
     // Set e.g. "Sunday" to do the full per-device sweep weekly: on other days the
-    // phase is skipped entirely and fact.AppInstall simply keeps its last snapshot —
+    // phase is skipped entirely and fact.AppInstall simply keeps its last snapshot -
     // the agent + scoring keep the dashboard's usage data fresh in between.
     public string ExpandInstallsDayOfWeek { get; set; } = "";
 
     // Transient-failure retry budget for 5xx (exponential backoff).
     public int MaxRetries { get; set; } = 5;
 
-    // Throttle (429) retry budget — separate from, and far higher than, MaxRetries.
+    // Throttle (429) retry budget - separate from, and far higher than, MaxRetries.
     // We honor the service's Retry-After exactly and would rather WAIT than lose data,
     // so a single Graph call (or $batch POST) waits-and-retries up to this many times.
     public int ThrottleMaxRetries { get; set; } = 100;
@@ -144,7 +144,7 @@ public sealed class ConnectorOptions
     // tenant, app id). Gate separately so inventory can run without hunting.
     public bool EnableMdeHunting { get; set; } = false;
     public int MdeHuntingLookbackDays { get; set; } = 30;
-    // Executables to hunt — keep aligned with the scoring AppTiedSkus mapping.
+    // Executables to hunt - keep aligned with the scoring AppTiedSkus mapping.
     public string[] MdeHuntingExecutables { get; set; } = ["visio.exe", "winproj.exe", "pbidesktop.exe"];
 
     // ---- Entra per-application sign-ins (entra.app-signins) ----------------
@@ -174,8 +174,8 @@ public sealed class ConnectorOptions
     public string CopilotApiBaseUrl { get; set; } = "https://graph.microsoft.com/beta";
 
     // Leaver pipeline: pull employeeLeaveDateTime (activates OFFBOARDED / OFFBOARDING_SCHEDULED
-    // scoring). employeeLeaveDateTime is a PROTECTED property — selecting it without
-    // User-LifeCycleInfo.Read.All 403s the whole /users call — so it stays OFF until the scope
+    // scoring). employeeLeaveDateTime is a PROTECTED property - selecting it without
+    // User-LifeCycleInfo.Read.All 403s the whole /users call - so it stays OFF until the scope
     // is granted. Flip Prism__EnableLeaverDates=true after granting it.
     public bool EnableLeaverDates { get; set; } = false;
 
@@ -224,6 +224,35 @@ public sealed class ConnectorOptions
         ["Project Plan 3"] = "PROJECTPROFESSIONAL",
         ["Visio Plan 2"] = "VISIOCLIENT",
     };
+
+    // ---- v2 signal connectors (all OFF by default; each needs its Graph scope) -----
+    // Mailbox settings (graph.mailboxsettings): userPurpose per licensed user - the
+    // DETERMINISTIC shared/room/equipment discriminator. Needs MailboxSettings.Read.
+    public bool EnableMailboxSettings { get; set; } = false;
+
+    // Teams PSTN calls (graph.pstn): real call-detail records aggregated per user -
+    // the authoritative Teams Phone usage signal. Needs CallRecord-PstnCalls.Read.All
+    // (CallRecords.Read.All also grants it but is far broader; prefer the narrow one).
+    public bool EnablePstn { get; set; } = false;
+    // Aggregation window in days (Graph caps a single getPstnCalls range at 90).
+    public int PstnWindowDays { get; set; } = 30;
+
+    // Auth-method registration (graph.authmethods): never-registered-MFA is positive
+    // "never onboarded" evidence for NEVER_ACTIVE. Needs AuditLog.Read.All (already
+    // granted for signInActivity / the sign-in connector).
+    public bool EnableAuthMethods { get; set; } = false;
+
+    // ---- v2 execution / resilience ---------------------------------------------
+    // How many connectors run concurrently. Graph throttles per app+tenant, so keep
+    // this modest; 1 restores the old strictly-sequential behaviour. The report-CSV
+    // connectors are I/O-light on Graph, so 3 is a safe default that roughly halves
+    // wall-clock time on a full run.
+    public int MaxConcurrentConnectors { get; set; } = 3;
+
+    // Consecutive-failure ceiling for connector sweep loops that continue after
+    // individual item failures (see ConsecutiveFailureBreaker). When even the
+    // retried requests fail this many times IN A ROW, the connector aborts cleanly.
+    public int CircuitBreakerFailures { get; set; } = 5;
 
     // Which connectors to run (by Name). Empty/null => run all registered connectors.
     public string[] Enabled { get; set; } = [];

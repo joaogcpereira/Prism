@@ -78,6 +78,7 @@ public sealed class LicenseConnector : IConnector
             "users?$top=" + _opts.PageSize +
             "&$select=id,userPrincipalName,displayName,accountEnabled,department,jobTitle," +
             "usageLocation,createdDateTime,employeeHireDate," + leaveField +
+            "userType,onPremisesSyncEnabled," +   // v2: guest + hybrid provenance
             "securityIdentifier,onPremisesSecurityIdentifier,licenseAssignmentStates,signInActivity";
 
         var users = new List<DimUser>();
@@ -102,7 +103,9 @@ public sealed class LicenseConnector : IConnector
                 LastNonInteractiveSignInDateTime: u.SignInActivity?.LastNonInteractiveSignInDateTime,
                 LastSuccessfulSignInDateTime: u.SignInActivity?.LastSuccessfulSignInDateTime,
                 SecurityIdentifier: u.SecurityIdentifier,
-                OnPremisesSecurityIdentifier: u.OnPremisesSecurityIdentifier));
+                OnPremisesSecurityIdentifier: u.OnPremisesSecurityIdentifier,
+                UserType: u.UserType,
+                OnPremisesSyncEnabled: u.OnPremisesSyncEnabled));
 
             if (u.LicenseAssignmentStates is { Count: > 0 })
             {
@@ -149,7 +152,7 @@ public sealed class LicenseConnector : IConnector
 
         // ---- Soft-deleted users that still hold (and bill) licences -------
         // Deleted users keep their assigned SKUs for ~30 days unless explicitly
-        // removed — pure waste no active-user query surfaces. Optional.
+        // removed - pure waste no active-user query surfaces. Optional.
         if (_opts.IncludeDeletedUserLicenses)
         {
             var deleted = new List<FactDeletedUserLicense>();

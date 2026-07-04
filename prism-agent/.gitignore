@@ -11,7 +11,7 @@ obj/
 *.zip
 *.pdb
 
-# ---- Real agent config — publish deploy/config.sample.json instead ----
+# ---- Real agent config - publish deploy/config.sample.json instead ----
 deploy/config.json
 
 # ---- Local app data ----

@@ -1,5 +1,5 @@
 // ============================================================
-//  Dtos.cs  (Prism.Scoring)  — rows read from the warehouse views.
+//  Dtos.cs  (Prism.Scoring)  - rows read from the warehouse views.
 // ============================================================
 namespace Prism.Scoring;
 
@@ -33,6 +33,25 @@ public sealed class SignalRow
     public DateTime? M365ReportRefreshDate;
     public DateTime? LastSuccessfulSignInDateTime;
     public int DisabledPlanCount;
+    // ---- v2 signals ----
+    public string? JobTitle;
+    public string? UserType;                    // Member | Guest
+    public bool? OnPremisesSyncEnabled;
+    public string? MailboxPurpose;              // user | shared | room | equipment | ... (deterministic)
+    public string? MailboxAutoReply;            // disabled | alwaysEnabled | scheduled
+    public bool? IsMfaRegistered;               // never-registered = never onboarded corroboration
+    public DateTime? AuthMethodsUpdatedDateTime;
+}
+
+/// <summary>One row of vw.PstnUsageByUser: real PSTN call-detail aggregate - the
+/// authoritative Teams Phone usage signal (much stronger than the Teams report).</summary>
+public sealed class PstnRow
+{
+    public string UserId = "";
+    public int CallCount;
+    public long TotalDurationSeconds;
+    public DateTime? LastCall;
+    public int WindowDays;
 }
 
 /// <summary>One row of vw.AppUsageByUser90: per (Entra user, exe) foreground usage + per-user coverage.</summary>
@@ -103,12 +122,13 @@ public sealed class M365AppRow
     public DateTime? Word, Excel, PowerPoint, Outlook, OneNote, Teams, AnyApp;
 }
 
-/// <summary>One row of vw.CopilotUsageByUser: per-user last Copilot activity (any host app).
-/// The authoritative usage signal for the Microsoft 365 Copilot SKU.</summary>
+/// <summary>One row of vw.CopilotDepthByUser: per-user last Copilot activity (any host app)
+/// plus HOW MANY host apps were touched - the authoritative Copilot usage + depth signal.</summary>
 public sealed class CopilotRow
 {
     public string UserId = "";
     public DateTime? LastActivity;
+    public int SurfacesUsed;   // of the 8 Copilot host apps (Teams/Word/Excel/PPT/Outlook/OneNote/Loop/Chat)
 }
 
 /// <summary>One row of vw.TeamsActivityByUser: per-user Teams call/meeting counts. The call

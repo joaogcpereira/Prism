@@ -3,7 +3,7 @@
 //  Source: entra.sp-signins. Read-only (AuditLog.Read.All).
 //
 //  reports/servicePrincipalSignInActivities (Graph BETA): last sign-in per
-//  enterprise application (service principal). Per-app, not per-user — it flags
+//  enterprise application (service principal). Per-app, not per-user - it flags
 //  entirely-unused licensed SERVICES (an app nobody has signed into), which
 //  complements the per-user per-app sign-ins the SignInConnector already pulls.
 //  Stored for the dashboard / app-rationalization; not a per-(user,SKU) signal.

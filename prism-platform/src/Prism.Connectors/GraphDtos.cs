@@ -29,6 +29,8 @@ public sealed class GraphUser
     public string? EmployeeLeaveDateTime { get; set; }           // requires User-LifeCycleInfo.Read.All
     public string? SecurityIdentifier { get; set; }              // Entra/cloud SID, S-1-12-1-… (Entra-joined sessions)
     public string? OnPremisesSecurityIdentifier { get; set; }    // on-prem AD SID, S-1-5-21-… (hybrid sessions)
+    public string? UserType { get; set; }                        // Member | Guest (paid SKU on a Guest = governance flag)
+    public bool? OnPremisesSyncEnabled { get; set; }             // hybrid-synced account (null = cloud-only)
     public List<GraphLicenseAssignmentState>? LicenseAssignmentStates { get; set; }
     public GraphSignInActivity? SignInActivity { get; set; }
 }
@@ -132,7 +134,7 @@ public sealed class GraphManagedDevicesResponse
 
 // ---- /auditLogs/signIns (paged, beta-grade fields on v1.0) ----------------
 // Per-(user, application) interactive + non-interactive sign-ins. The connector
-// aggregates these to "last time user U touched app A" — the authoritative usage
+// aggregates these to "last time user U touched app A" - the authoritative usage
 // signal for WEB/SERVICE-first SKUs (Power BI service, Project web) that no exe-
 // or workload-based signal can see.
 public sealed class GraphSignInsResponse
@@ -234,4 +236,64 @@ public sealed class GraphManagedDeviceRef
     public string Id { get; set; } = "";
     public string? DeviceName { get; set; }
     public string? UserPrincipalName { get; set; }
+}
+
+// ---- v2: licensed-user id page (mailbox-settings enumeration) --------------
+public sealed class GraphUserIdsResponse
+{
+    [JsonPropertyName("value")] public List<GraphUserId> Value { get; set; } = [];
+    [JsonPropertyName("@odata.nextLink")] public string? NextLink { get; set; }
+}
+public sealed class GraphUserId
+{
+    public string Id { get; set; } = "";
+    public string? UserPrincipalName { get; set; }
+}
+
+// ---- v2: /users/{id}/mailboxSettings ($batch sub-response body) ------------
+public sealed class GraphMailboxSettings
+{
+    public string? UserPurpose { get; set; }                     // user | shared | room | equipment | linked | others
+    public string? TimeZone { get; set; }
+    public GraphAutomaticReplies? AutomaticRepliesSetting { get; set; }
+}
+public sealed class GraphAutomaticReplies
+{
+    public string? Status { get; set; }                          // disabled | alwaysEnabled | scheduled
+}
+
+// ---- v2: /communications/callRecords/getPstnCalls (paged) ------------------
+public sealed class PstnCallsResponse
+{
+    [JsonPropertyName("value")] public List<PstnCall> Value { get; set; } = [];
+    [JsonPropertyName("@odata.nextLink")] public string? NextLink { get; set; }
+}
+public sealed class PstnCall
+{
+    public string? UserId { get; set; }
+    public string? UserPrincipalName { get; set; }
+    public string? StartDateTime { get; set; }
+    public int? Duration { get; set; }                           // seconds
+}
+
+// ---- v2: /reports/authenticationMethods/userRegistrationDetails (paged) ----
+public sealed class AuthRegistrationResponse
+{
+    [JsonPropertyName("value")] public List<AuthRegistrationDetail> Value { get; set; } = [];
+    [JsonPropertyName("@odata.nextLink")] public string? NextLink { get; set; }
+}
+public sealed class AuthRegistrationDetail
+{
+    public string Id { get; set; } = "";                         // the user's object id
+    public string? UserPrincipalName { get; set; }
+    public bool? IsAdmin { get; set; }
+    public bool? IsMfaRegistered { get; set; }
+    public bool? IsMfaCapable { get; set; }
+    public bool? IsPasswordlessCapable { get; set; }
+    public bool? IsSsprRegistered { get; set; }
+    public bool? IsSsprEnabled { get; set; }
+    public bool? IsSsprCapable { get; set; }
+    public List<string>? MethodsRegistered { get; set; }
+    public string? UserPreferredMethodForSecondaryAuthentication { get; set; }
+    public string? LastUpdatedDateTime { get; set; }
 }

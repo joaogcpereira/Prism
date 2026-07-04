@@ -1,5 +1,5 @@
 // =============================================================================
-// sqldatabase.bicep  —  Prism (AppID 0001) SQL logical server + database
+// sqldatabase.bicep  -  Prism (AppID 0001) SQL logical server + database
 // -----------------------------------------------------------------------------
 // Conformed to the the platform team "blessed" PAA template (sql/server .../using-private-access).
 // This REPLACES the old hand-rolled modules/sql.bicep.
@@ -185,11 +185,11 @@ var diagnosticsWorkspaceId = '${subscription().id}/resourcegroups/${environment}
 // Prism default DB: General Purpose *serverless* (cost-controlled), Entra-only.
 // Auto-pauses after 60 min idle, scales down to 0.5 vCore, 2 vCore ceiling.
 // NOTE: minCapacity is typed as a *string* by the AVM database type (the module
-// converts it with json() internally) — '0.5' is correct, 0.5 will not compile.
+// converts it with json() internally) - '0.5' is correct, 0.5 will not compile.
 var customDatabases = empty(databases)
   ? [
       {
-        // Note: databaseType has no `location` property — the AVM module sets each
+        // Note: databaseType has no `location` property - the AVM module sets each
         // database's location from the server location automatically.
         name: sqlDatabaseName!
         sku: {
@@ -199,7 +199,7 @@ var customDatabases = empty(databases)
           capacity: 2
         }
         autoPauseDelay: 60 // minutes idle before auto-pause (min allowed is 60)
-        minCapacity: '0.5' // floor vCores when resumed (string — see note above)
+        minCapacity: '0.5' // floor vCores when resumed (string - see note above)
         collation: 'SQL_Latin1_General_CP1_CI_AS'
         createMode: 'Default'
         maxSizeBytes: 268435456000 // 250 GB
