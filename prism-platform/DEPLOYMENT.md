@@ -65,7 +65,6 @@ sqlcmd -S <server>.database.windows.net -d prism -G -i schema/seed-commercial.sq
 - **`schema/seed-commercial.sql`** loads your negotiated EUR unit prices and EA contract
   quantities. Edit it to match your contract; re-run after edits. (You can instead maintain
   `ref.SkuCost` by hand or wire the pricing connector - see `PRICING.md`.)
->>>>>>> 78331c20c8456251821a9fc0bdb0410cf36fd66f
 
 **Grant the managed identity database access** (read + write to Prism's own database only - this
 grants nothing in Microsoft 365):
