@@ -237,8 +237,8 @@ Issues and pull requests are welcome - new connectors, additional reason codes, 
 
 ## License
 
-Released under the **MIT License** - see [`LICENSE`](LICENSE).
+Released under the **MIT License** - see [`LICENSE`](prism-platform/LICENSE).
 
 ## Disclaimer
 
-Prism is provided as-is. It reads your Microsoft 365 / Azure data and produces recommendations; **you** own the decision to act on any verdict. Validate reclaim candidates on real data before enabling any auto-reclaim flag.
+Prism is provided as-is. It reads your Microsoft 365 / Azure data and produces recommendations; **you** own the decision to act on any verdict. Validate reclaim candidates on real data before acting.
