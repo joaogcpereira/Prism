@@ -45,23 +45,7 @@ sqlcmd -S <server>.database.windows.net -d prism -G -i schema/schema.sql
 sqlcmd -S <server>.database.windows.net -d prism -G -i schema/seed-commercial.sql
 ```
 
-- **`schema/schema.sql`** is the entire warehouse - every schema, table, index, analytic view,
-<<<<<<< HEAD
-  and the curated product reference data. It is idempotent **and self-migrating**: new v2
-  columns are guarded `ALTER`s, changed indexes drop-and-recreate under `*_v2` names, so
-  re-running it upgrades an existing database in place.
-- **`schema/seed-commercial.sql`** loads your negotiated EUR unit prices and EA contract
-  quantities. Edit it to match your contract; re-run after edits. (You can instead maintain
-  `ref.SkuCost` by hand or wire the pricing connector - see `PRICING.md`.)
-- **Upgrading a preview (pre-RC1) database?** Run `schema/schema.sql` (as above), then
-  **`schema/migrate-v2.sql`** once: it backfills `DisabledPlanCount`, seeds
-  `score.VerdictHistory` with the current verdicts (so "what changed" has a baseline), and
-  verifies every release object exists. The RC1 connectors (mailbox settings, PSTN, auth
-  methods) are **off by default**; enable them per `infra/scripts/grant-prism-identity.ps1`'s
-  scope notes (`MailboxSettings.Read`, `CallRecord-PstnCalls.Read.All`). Full release notes:
-  `CHANGELOG.md`.
-=======
-  and the curated product reference data. It is idempotent: safe to re-run any time.
+- **`schema/schema.sql`** is the entire warehouse - every schema, table, index, analytic view and the curated product reference data. It is idempotent **and self-migrating**
 - **`schema/seed-commercial.sql`** loads your negotiated EUR unit prices and EA contract
   quantities. Edit it to match your contract; re-run after edits. (You can instead maintain
   `ref.SkuCost` by hand or wire the pricing connector - see `PRICING.md`.)
@@ -271,9 +255,7 @@ az keyvault secret set --vault-name contoso-prism-dev --name prism-device-ca --f
 
 - `keyVaultName` / `keyVaultResourceGroupName` / `caCertificateName` - the existing vault, its
 <<<<<<< HEAD
-  resource group, and the **secret** name from §5a. At Contoso the vault is `contoso-prism-dev` in the
-  **shared `dev-prism-shr`** RG while the apps are in `dev-prism`, so `keyVaultResourceGroupName` is
-  set to `dev-prism-shr`. The role grant is applied through a module (`keyvault-role.bicep`) scoped
+  resource group, and the **secret** name from §5a. The role grant is applied through a module (`keyvault-role.bicep`) scoped
   to that RG, since a role assignment is created in the RG it targets.
 - `grantKeyVaultAccess=true` (default) grants the managed identity the built-in **Key Vault
   Secrets User** role (`4633458b-…`) on the vault. Because the vault sits in a **shared** RG, the
@@ -285,13 +267,6 @@ az keyvault secret set --vault-name contoso-prism-dev --name prism-device-ca --f
   `Gateway__ManagedIdentityClientId` are populated automatically from those parameters. Cross-RG
   RBAC is fine at runtime - the identity reads the secret regardless of which RG the vault is in.
   (For local dev only, `Gateway:CaCertificatePem` / `Gateway:CaCertificatePath` remain fallbacks.)
-=======
-  resource group, and the **secret** name from §5a.
-- `grantKeyVaultAccess=true` (default) grants the managed identity the built-in **Key Vault
-  Secrets User** role (`4633458b-…`) on the vault.
-- The gateway env vars `Gateway__CaCertificateKeyVaultUri`, `Gateway__CaCertificateName` and
-  `Gateway__ManagedIdentityClientId` are populated automatically from those parameters.
->>>>>>> 78331c20c8456251821a9fc0bdb0410cf36fd66f
 
 The agent ships usage over mutual TLS; the gateway writes it straight to `fact.AppUsage`, and
 scoring picks up the foreground-time signal automatically. Deploy/upgrade the gateway before the
@@ -306,11 +281,8 @@ agent fleet. Rotating the CA secret in Key Vault is picked up on the next gatewa
 - **On demand:** `az containerapp job start -g <rg> -n prism-connectors` (then `prism-scoring`).
 - **Logs:** Container Apps → each job → Execution history → Console. For retention, wire a Log
   Analytics workspace to the environment (recommended for production).
-<<<<<<< HEAD
 - **New version:** the pipeline rebuilds and redeploys on push. By hand: `az acr build … -t
   prism-connectors:v2 …` then `az containerapp job update --image …`.
-=======
->>>>>>> 78331c20c8456251821a9fc0bdb0410cf36fd66f
 - **The connectors job has no artificial timeout** - Graph throttling can legitimately stretch a
   full per-device sweep, so the only ceiling is the job's `replicaTimeout` (24h in the Bicep).
 
