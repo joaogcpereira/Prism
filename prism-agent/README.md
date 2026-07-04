@@ -97,19 +97,9 @@ Fleet (Intune, silent): see `deploy/INTUNE.md`. Scripts: `deploy/install.ps1`,
 
 ## Status - 1.3.0-rc.1
 
-Feature-complete release candidate (see [`CHANGELOG.md`](CHANGELOG.md)). Everything the
-v1 line shipped - measurement engine, named-pipe IPC, single-exe service + per-session
-launcher, install/uninstall, self-bounding spool, mTLS uploader - plus the RC hardening
-pass: **interactive-only pipe ACL**, a **silent-tracker watchdog** (hung trackers are
-detected via pipe liveness and relaunched), **per-file upload backoff with max-retry
-quarantine**, **pin + revocation TLS validation**, a **private-key startup probe**, and
-**spool-loss visibility**. The gateway/server side lands the batches in the Prism
+Feature-complete release candidate (see [`CHANGELOG.md`](CHANGELOG.md)). Measurement engine, named-pipe IPC, single-exe service + per-session
+launcher, install/uninstall, self-bounding spool, mTLS uploader, interactive-only pipe ACL, a silent-tracker watchdog (hung trackers are
+detected via pipe liveness and relaunched), per-file upload backoff with max-retry
+quarantine, pin + revocation TLS validation, a private-key startup probe, and
+spool-loss visibility. The gateway/server side lands the batches in the Prism
 warehouse (see the prism-platform repository).
-
-**Honest status:** the console paths are tested; the service-hosted path (SCM control +
-`CreateProcessAsUser` into sessions), the service-control install, and the mTLS upload
-(cert selection from `LocalMachine\My`, client-auth handshake) should still get a first
-run on a **pilot device** before fleet rollout. UWP/Store apps hosted by
-ApplicationFrameHost can roll up under the host process when the hosted child can't be
-resolved (AppUserModelID identity is planned). Sign the exe before packaging. Build on
-Windows with the .NET 10 SDK.
