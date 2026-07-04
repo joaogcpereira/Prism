@@ -15,7 +15,7 @@ Runs entirely inside your own Azure tenant. No third-party SaaS. No data egress.
 ![Access: read-only](https://img.shields.io/badge/Microsoft%20365-read--only-brightgreen)
 ![License: MIT](https://img.shields.io/badge/license-MIT-informational)
 
-**Release candidate 1** - feature-complete for 1.0. What shipped and how to upgrade: [`CHANGELOG.md`](CHANGELOG.md).
+**Release candidate 1** - feature-complete for 1.0. What shipped and how to upgrade: [`CHANGELOG.md`](prism-platform/CHANGELOG.md).
 
 </div>
 
