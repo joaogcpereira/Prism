@@ -155,7 +155,7 @@ Five components, all containers on one Container Apps environment:
 
 | Component | Type | Role |
 |---|---|---|
-| **prism-connectors** | Container Apps Job | Scheduled read-only ingest (the 16 connectors) |
+| **prism-connectors** | Container Apps Job | Scheduled read-only ingest (the 19 connectors) |
 | **prism-scoring** | Container Apps Job | Deterministic verdict engine over the warehouse |
 | **prism-dashboard** | Container App | Read-only web UI + `/api` + human decision log |
 | **prism-gateway** | Container App | Optional mTLS endpoint the desktop agent ships usage to |
@@ -182,7 +182,7 @@ Full runbook: **[`DEPLOYMENT.md`](DEPLOYMENT.md)**. The short version:
 
 ```
 src/
-  Prism.Connectors/       16 read-only ingest connectors (scheduled job)
+  Prism.Connectors/       19 read-only ingest connectors (scheduled job)
   Prism.Scoring/          deterministic verdict engine (scheduled job)
   Prism.Dashboard/        read-only web UI + decision log
   Prism.Gateway/          mTLS ingest endpoint for the desktop agent
