@@ -41,7 +41,7 @@ param publicNetworkAccess string = 'Disabled'
 param zoneRedundant bool = false
 
 @description('Optional. Resource ID of a Log Analytics workspace for app log streaming. If empty, app log collection is not configured (Application Insights does not require a Private Endpoint).')
-param logAnalyticsWorkspaceResourceId string = '37f0d1e0-9705-41af-9235-8ca1b96d0c19'
+param logAnalyticsWorkspaceResourceId string = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 
 // =============== //
 // Variables       //
